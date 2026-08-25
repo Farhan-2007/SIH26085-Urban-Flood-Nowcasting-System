@@ -21,10 +21,15 @@ The platform will provide:
 ## Team Members & Responsibilities
 
 Member 1 : Frontend & Dashboard | Develop the web dashboard, user interface, risk visualization components, and frontend-backend integration |
+
 Member 2 : Map & GIS Visualization | Handle GIS data, map layers, terrain/DEM analysis, flood-zone visualization, and spatial processing |
+
 Member 3 : Backend & Flood Risk Engine | Develop backend APIs, flood-risk calculations, runoff analysis, drainage-capacity comparison, and hydraulic logic |
+
 Member 4 : Predictor–Analyser & Routing | Develop the Predictor–Analyser architecture, risk updates, prediction logic, affected-road detection, and safer route suggestions |
+
 Member 5 : Data Collection & Dataset Preparation | Collect rainfall, weather, terrain, drainage, and historical flood data; clean, process, and prepare datasets |
+
 Member 6 :  Testing, Documentation & Presentation | Perform system testing, validation, documentation, project reports, presentation preparation, and final demonstration |
 
 ## Technology Stack
