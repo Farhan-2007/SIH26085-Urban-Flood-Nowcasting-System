@@ -1,0 +1,28 @@
+.dashboard {
+  flex: 1;
+  width: 100%;
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 20px 24px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.app-loading {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: var(--color-bg);
+  color: var(--color-text-secondary);
+  font-size: 14px;
+}
+
+@media (max-width: 720px) {
+  .dashboard {
+    padding: 16px 14px 32px;
+    gap: 16px;
+  }
+}

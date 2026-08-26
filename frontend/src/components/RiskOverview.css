@@ -1,0 +1,45 @@
+.risk-overview__body {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  flex-wrap: wrap;
+}
+
+.risk-overview__details {
+  flex: 1;
+  min-width: 220px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.risk-overview__level-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.risk-overview__status-label {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.risk-overview__description {
+  font-size: 14px;
+  color: var(--color-text-primary);
+  font-weight: 500;
+}
+
+.risk-overview__note {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  border-left: 3px solid var(--color-border-strong);
+  padding-left: 10px;
+}
+
+@media (max-width: 600px) {
+  .risk-overview__body {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
