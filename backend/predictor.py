@@ -212,6 +212,17 @@ class PredictorIO:
         """Same output as a list of dicts -- e.g. for a Flask API response."""
         return self.run().to_dict(orient="records")
 
+# ---------------------------------------------------------------------------
+# API helper
+# ---------------------------------------------------------------------------
+
+def predict_flood_forecast(street: dict, weather: dict) -> list:
+    """
+    Generate the complete flood forecast for a street/location.
+    Used by the Flask API.
+    """
+    predictor = PredictorIO(street, weather)
+    return predictor.to_dict_records()
 
 # ---------------------------------------------------------------------------
 # DEMO -- run standalone to sanity-check today's output

@@ -59,6 +59,18 @@ export async function predictFloodRisk({
   return data;
 }
 
+export async function getBackendForecast() {
+  const response = await fetch(`${API_BASE_URL}/forecast`);
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error || "Failed to load flood forecast");
+  }
+
+  return data;
+}
+
 // --------------------------------------------------
 // Mock Dashboard Data
 // --------------------------------------------------

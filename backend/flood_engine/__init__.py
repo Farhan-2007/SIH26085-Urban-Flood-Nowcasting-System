@@ -1,1 +1,1 @@
-from .predictor import predict_flood_risk
+from .predictor_f import predict_flood_risk

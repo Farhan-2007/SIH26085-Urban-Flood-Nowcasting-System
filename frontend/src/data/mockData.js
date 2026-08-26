@@ -28,6 +28,7 @@ export const FORECAST_TIMELINE = [
     riskScore: 58,
     rainfallIntensity: 52, // mm/hr
     recentRainfall: 38, // mm, last 3 hours
+    forecastRainfall: 55, // mm, forecast rainfall
     waterLevel: 1.1, // metres
     drainageCapacityUsed: 48, // %
     surfaceRunoff: "MEDIUM",
@@ -41,6 +42,7 @@ export const FORECAST_TIMELINE = [
     riskScore: 74,
     rainfallIntensity: 70,
     recentRainfall: 50,
+    forecastRainfall: 72, 
     waterLevel: 1.5,
     drainageCapacityUsed: 66,
     surfaceRunoff: "High",
@@ -54,6 +56,7 @@ export const FORECAST_TIMELINE = [
     riskScore: 91,
     rainfallIntensity: 86,
     recentRainfall: 66,
+    forecastRainfall: 88,
     waterLevel: 1.9,
     drainageCapacityUsed: 88,
     surfaceRunoff: "Very High",
@@ -67,6 +70,7 @@ export const FORECAST_TIMELINE = [
     riskScore: 47,
     rainfallIntensity: 22,
     recentRainfall: 70,
+    forecastRainfall: 30, 
     waterLevel: 1.5,
     drainageCapacityUsed: 55,
     surfaceRunoff: "MEDIUM",
