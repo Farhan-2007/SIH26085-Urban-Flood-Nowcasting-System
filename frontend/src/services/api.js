@@ -1,17 +1,10 @@
 // Data access layer for the Urban Flood Nowcasting Dashboard.
 //
-// Every UI component reads dashboard data through the functions exported
-// here rather than importing src/data/mockData.js directly. Today each
-// function resolves mock data; once the backend team's REST endpoints are
-// available, only the bodies below need to change (e.g. swap in a fetch()
-// call to the real endpoint) — component code does not need to change.
+// UI components access dashboard data through the functions exported
+// from this file. Mock data is still used for dashboard sections that
+// are not connected to the backend yet.
 //
-// Expected future endpoints (not yet finalised):
-//   GET /api/risk/current        -> current risk score, level, factors
-//   GET /api/forecast            -> 0-3 hour nowcast timeline
-//   GET /api/rainfall/history    -> recent rainfall time series
-//   GET /api/alerts              -> active alerts / warnings
-//   GET /api/map/risk-zones      -> geographic risk-zone data
+// The flood-risk prediction is now connected to the Flask backend.
 
 import {
   SYSTEM_INFO,
@@ -22,13 +15,53 @@ import {
   LAST_UPDATED,
 } from "../data/mockData";
 
-// Simulates network latency so loading states behave realistically once
-// real API calls are substituted in.
+// Flask backend API
+const API_BASE_URL = "http://127.0.0.1:5000/api";
+
+// Simulates network latency for mock data
 const MOCK_LATENCY_MS = 150;
 
 function resolveMock(value) {
-  return new Promise((resolve) => setTimeout(() => resolve(value), MOCK_LATENCY_MS));
+  return new Promise((resolve) =>
+    setTimeout(() => resolve(value), MOCK_LATENCY_MS)
+  );
 }
+
+// --------------------------------------------------
+// Backend Flood Risk Prediction
+// --------------------------------------------------
+
+export async function predictFloodRisk({
+  rainfall,
+  rainfall_intensity,
+  water_level,
+  forecast_rainfall,
+}) {
+  const response = await fetch(`${API_BASE_URL}/predict`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      rainfall,
+      rainfall_intensity,
+      water_level,
+      forecast_rainfall,
+    }),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error || "Failed to predict flood risk");
+  }
+
+  return data;
+}
+
+// --------------------------------------------------
+// Mock Dashboard Data
+// --------------------------------------------------
 
 export async function getSystemInfo() {
   return resolveMock(SYSTEM_INFO);

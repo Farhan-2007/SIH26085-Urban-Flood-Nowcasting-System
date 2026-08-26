@@ -3,7 +3,7 @@ import "./AlertsPanel.css";
 const SEVERITY_COLOR_VAR = {
   CRITICAL: "--color-risk-critical",
   HIGH: "--color-risk-high",
-  MODERATE: "--color-risk-moderate",
+  MEDIUM: "--color-risk-moderate",
   LOW: "--color-risk-low",
 };
 

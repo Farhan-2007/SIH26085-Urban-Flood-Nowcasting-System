@@ -30,7 +30,7 @@ export const FORECAST_TIMELINE = [
     recentRainfall: 38, // mm, last 3 hours
     waterLevel: 1.1, // metres
     drainageCapacityUsed: 48, // %
-    surfaceRunoff: "Moderate",
+    surfaceRunoff: "MEDIUM",
     soilSaturation: 68, // %
     forecastNote: "Rainfall is intensifying and drainage load is rising across the monitored zone.",
   },
@@ -69,7 +69,7 @@ export const FORECAST_TIMELINE = [
     recentRainfall: 70,
     waterLevel: 1.5,
     drainageCapacityUsed: 55,
-    surfaceRunoff: "Moderate",
+    surfaceRunoff: "MEDIUM",
     soilSaturation: 85,
     forecastNote: "Rainfall is easing and water levels are receding, though the ground remains saturated.",
   },
@@ -98,7 +98,7 @@ export const ALERTS = [
   },
   {
     id: "AL-1041",
-    severity: "MODERATE",
+    severity: "MEDIUM",
     title: "RAINFALL WARNING",
     message: "High-intensity rainfall expected to continue over the next hour.",
     zone: "Zone 4 — Ward 17",
@@ -106,7 +106,7 @@ export const ALERTS = [
   },
   {
     id: "AL-1039",
-    severity: "MODERATE",
+    severity: "MEDIUM",
     title: "DRAINAGE ALERT",
     message: "Drainage capacity utilisation is forecast to exceed 80% of rated threshold within two hours.",
     zone: "Sector 12 stormwater line",
@@ -121,9 +121,9 @@ export const RISK_ZONES = [
   { id: "z1", name: "Ward 17 — Central Basin", x: 46, y: 42, level: "CRITICAL", riskScore: 89 },
   { id: "z2", name: "Sector 12 — Stormwater Line", x: 62, y: 30, level: "HIGH", riskScore: 78 },
   { id: "z3", name: "Old Town Low-Lying Belt", x: 30, y: 58, level: "HIGH", riskScore: 74 },
-  { id: "z4", name: "Riverside Colony", x: 70, y: 65, level: "MODERATE", riskScore: 48 },
+  { id: "z4", name: "Riverside Colony", x: 70, y: 65, level: "MEDIUM", riskScore: 48 },
   { id: "z5", name: "North Ridge Residential", x: 55, y: 18, level: "LOW", riskScore: 18 },
-  { id: "z6", name: "East Industrial Belt", x: 80, y: 45, level: "MODERATE", riskScore: 42 },
+  { id: "z6", name: "East Industrial Belt", x: 80, y: 45, level: "MEDIUM", riskScore: 42 },
 ];
 
 export const LAST_UPDATED = "2026-08-26T12:05:00+05:30";
