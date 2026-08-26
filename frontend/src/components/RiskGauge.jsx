@@ -33,7 +33,7 @@ function describeArc(cx, cy, r, startAngle, endAngle) {
 
 const BANDS = [
   { level: "LOW", from: 0, to: 25 },
-  { level: "MODERATE", from: 25, to: 50 },
+  { level: "MEDIUM", from: 25, to: 50 },
   { level: "HIGH", from: 50, to: 75 },
   { level: "CRITICAL", from: 75, to: 100 },
 ];
