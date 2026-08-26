@@ -1,0 +1,32 @@
+.risk-gauge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.risk-gauge__svg {
+  width: 220px;
+  max-width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.risk-gauge__readout {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  margin-top: -18px;
+}
+
+.risk-gauge__score {
+  font-size: 34px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.risk-gauge__scale {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+}

@@ -1,0 +1,26 @@
+.risk-badge {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  border: 1.5px solid;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  white-space: nowrap;
+}
+
+.risk-badge--sm {
+  font-size: 10.5px;
+  padding: 1px 6px;
+}
+
+.risk-badge--md {
+  font-size: 12px;
+  padding: 3px 9px;
+}
+
+.risk-badge--lg {
+  font-size: 15px;
+  padding: 5px 14px;
+}

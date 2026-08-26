@@ -1,0 +1,117 @@
+.timeline {
+  padding: 8px 4px 0;
+  outline: none;
+}
+
+.timeline__track {
+  position: relative;
+  height: 4px;
+  background: var(--color-border);
+  border-radius: 2px;
+  margin: 0 8px;
+}
+
+.timeline__track-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: var(--color-blue-600);
+  border-radius: 2px;
+  transition: width 0.25s ease;
+}
+
+.timeline__node {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 22px;
+  height: 22px;
+  border: none;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.timeline__node-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--color-surface);
+  border: 2px solid var(--color-border-strong);
+  transition: all 0.2s ease;
+}
+
+.timeline__node--active .timeline__node-dot {
+  background: var(--color-blue-600);
+  border-color: var(--color-blue-600);
+  width: 14px;
+  height: 14px;
+}
+
+.timeline__labels {
+  position: relative;
+  height: 24px;
+  margin: 6px 8px 0;
+}
+
+.timeline__label {
+  position: absolute;
+  transform: translateX(-50%);
+  background: none;
+  border: none;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  padding: 2px 4px;
+}
+
+.timeline__label--active {
+  color: var(--color-blue-600);
+}
+
+.timeline__summary {
+  margin-top: 20px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+.timeline__summary-card {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  cursor: pointer;
+  background: var(--color-surface);
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.timeline__summary-card:hover {
+  border-color: var(--color-blue-500);
+}
+
+.timeline__summary-card--active {
+  border-color: var(--color-blue-600);
+  background: var(--color-info-bg);
+}
+
+.timeline__summary-score {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+@media (max-width: 640px) {
+  .timeline__summary {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .timeline__labels {
+    display: none;
+  }
+}

@@ -1,0 +1,22 @@
+.app-footer {
+  margin-top: auto;
+  background: var(--color-navy-900);
+  color: var(--color-text-on-dark-muted);
+  padding: 12px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11.5px;
+}
+
+.app-footer__row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.app-footer__row--muted {
+  color: rgba(169, 188, 206, 0.7);
+  font-size: 11px;
+}
