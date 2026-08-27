@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-
+from routing.routing_engine import build_routing_report
 from .validator import validate_flood_input
 from flood_engine import predict_flood_risk
 
@@ -55,6 +55,30 @@ def forecast():
             "location": SAMPLE_STREET["location_name"],
             "forecast": results
         }), 200
+
+    except Exception as error:
+        return jsonify({
+            "error": str(error)
+        }), 500
+    
+@api.route("/routing", methods=["GET"])
+def routing():
+
+    start_id = request.args.get("start_id")
+    end_id = request.args.get("end_id")
+
+    if not start_id or not end_id:
+        return jsonify({
+            "error": "start_id and end_id are required"
+        }), 400
+
+    try:
+        report = build_routing_report(
+            start_id=start_id,
+            end_id=end_id
+        )
+
+        return jsonify(report), 200
 
     except Exception as error:
         return jsonify({

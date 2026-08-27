@@ -89,7 +89,7 @@ def find_safer_route(network, risk_data, start_id, end_id):
     roads_used.reverse()
 
     # figure out which affected (high-risk) roads were successfully avoided
-    from affected_roads import get_affected_roads
+    from .affected_roads import get_affected_roads
     all_affected = {r["road_id"] for r in get_affected_roads(network, risk_data)}
     avoided = list(all_affected - set(roads_used))
 

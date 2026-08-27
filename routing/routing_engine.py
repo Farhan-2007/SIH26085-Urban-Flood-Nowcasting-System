@@ -10,11 +10,10 @@ output) — nothing else in this file needs to change, since everything
 downstream only depends on the same dict shapes.
 """
 
-from road_network import RoadNetwork
-from affected_roads import get_affected_roads, get_shifting_risk
-from safer_route import find_safer_route
-from mock_data import MOCK_LOCATIONS, MOCK_ROADS, MOCK_RISK_DATA
-
+from .road_network import RoadNetwork
+from .affected_roads import get_affected_roads, get_shifting_risk
+from .safer_route import find_safer_route
+from .mock_data import MOCK_LOCATIONS, MOCK_ROADS, MOCK_RISK_DATA
 
 def load_mock_inputs():
     """Swap this out later for real data pulled from the pipeline."""
