@@ -2,7 +2,7 @@ import { MapContainer, TileLayer } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import LocationMarkers from "./LocationMarkers";
 
-export default function GISMap() {
+export default function GISMap({ zones }) {
   return (
     <MapContainer
       center={[19.076, 72.8777]}
@@ -15,7 +15,7 @@ export default function GISMap() {
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
 
-      <LocationMarkers />
+      <LocationMarkers zones={zones} />
     </MapContainer>
   );
 }
