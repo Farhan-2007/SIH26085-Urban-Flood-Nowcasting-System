@@ -22,6 +22,7 @@ export default function App() {
     alerts,
     riskZones,
     lastUpdated,
+    analysis,
   } = useDashboardData();
 
   if (loading) {
@@ -39,14 +40,28 @@ export default function App() {
 
       <main className="dashboard">
         <div className="dashboard__row dashboard__row--top">
-          <RiskOverview selected={selected} />
+          <RiskOverview
+            selected={selected}
+            analysis={analysis}
+          />
         </div>
 
-        <RiskFactorsPanel selected={selected} />
+        <RiskFactorsPanel
+          selected={selected}
+          analysis={analysis}
+        />
 
-        <RainfallPanel selected={selected} history={rainfallHistory} />
+        <RainfallPanel
+          selected={selected}
+          history={rainfallHistory}
+          analysis={analysis}
+        />
 
-        <FloodMap zones={riskZones} />
+        <FloodMap
+          zones={riskZones}
+          selected={selected}
+          analysis={analysis}
+        />
 
         <ForecastTimeline
           timeline={timeline}

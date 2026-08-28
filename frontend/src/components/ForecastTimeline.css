@@ -90,6 +90,9 @@
   cursor: pointer;
   background: var(--color-surface);
   transition: border-color 0.15s ease, background 0.15s ease;
+  font-family: inherit;
+  text-align: left;
+  width: 100%;
 }
 
 .timeline__summary-card:hover {
@@ -111,6 +114,7 @@
   .timeline__summary {
     grid-template-columns: repeat(2, 1fr);
   }
+
   .timeline__labels {
     display: none;
   }
