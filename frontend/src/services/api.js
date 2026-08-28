@@ -98,3 +98,21 @@ export async function getRiskZones() {
 export async function getLastUpdated() {
   return resolveMock(LAST_UPDATED);
 }
+
+export async function analyseFloodConditions(data) {
+  const response = await fetch(`${API_BASE_URL}/analyse`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  });
+
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.error || "Failed to analyse flood conditions");
+  }
+
+  return result;
+}

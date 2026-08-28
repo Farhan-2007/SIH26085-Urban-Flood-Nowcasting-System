@@ -18,8 +18,18 @@ function CustomTooltip({ active, payload, label }) {
   );
 }
 
-export default function RainfallPanel({ selected, history }) {
+export default function RainfallPanel({
+  selected,
+  history,
+  analysis,
+}) {
   if (!selected) return null;
+  const isNow = selected.label === "NOW";
+
+  const rainfallIntensity =
+    isNow && analysis
+      ? analysis.rainfall_smoothed
+      : selected.rainfallIntensity;
 
   return (
     <section className="panel" aria-labelledby="rainfall-heading">
@@ -31,7 +41,7 @@ export default function RainfallPanel({ selected, history }) {
           <div className="rainfall-readout">
             <span className="eyebrow">Current Rainfall</span>
             <div>
-              <span className="mono rainfall-readout__value">{selected.rainfallIntensity}</span>
+              <span className="mono rainfall-readout__value">{rainfallIntensity}</span>
               <span className="rainfall-readout__unit"> mm/hr</span>
             </div>
           </div>
@@ -44,7 +54,7 @@ export default function RainfallPanel({ selected, history }) {
           </div>
           <div className="rainfall-readout rainfall-readout--forecast">
             <span className="eyebrow">Forecast</span>
-            <p className="rainfall-readout__forecast-text">{forecastLabel(selected.rainfallIntensity)}</p>
+            <p className="rainfall-readout__forecast-text">{forecastLabel(rainfallIntensity)}</p>
           </div>
         </div>
 
