@@ -1,16 +1,21 @@
 from flask import Blueprint, request, jsonify
 from routing.routing_engine import build_routing_report
 from .validator import validate_flood_input
-from flood_engine import predict_flood_risk
+from backend.flood_engine import predict_flood_risk
+from backend.data_loader import get_location
 
-from predictor import (
+from backend.predictor import (
     SAMPLE_STREET,
     SAMPLE_WEATHER,
     predict_flood_forecast,
 )
 
+from backend.Analyser import RealtimeAnalyser
 
 api = Blueprint("api", __name__)
+
+# Store one persistent analyser for each location
+analysers = {}
 
 # Existing single-point prediction endpoint
 
@@ -55,6 +60,77 @@ def forecast():
             "location": SAMPLE_STREET["location_name"],
             "forecast": results
         }), 200
+
+    except Exception as error:
+        return jsonify({
+            "error": str(error)
+        }), 500
+    
+@api.route("/analyse", methods=["POST"])
+def analyse():
+
+    data = request.get_json()
+
+    if not data:
+        return jsonify({
+            "error": "Request body is required"
+        }), 400
+
+    try:
+        # Step 1: Get location/street data
+        location_id = data.get("location_id")
+
+        if location_id:
+            street_data = get_location(location_id)
+
+            if not street_data:
+                return jsonify({
+                    "error": f"Location '{location_id}' not found"
+                }), 404
+        else:
+            street_data = data.get("street", SAMPLE_STREET)
+
+        # Step 2: Create analyser for this location
+        # Step 2: Get persistent analyser for this location
+        analyser_key = street_data["location_id"]
+
+        # Create analyser only if this location has not been analysed before
+        if analyser_key not in analysers:
+            analysers[analyser_key] = RealtimeAnalyser(
+                street_data,
+                alpha=0.4
+            )
+
+        # Reuse the existing analyser
+        analyser = analysers[analyser_key]
+
+        # Step 3: Analyse conditions
+        analysis_result = analyser.analyse(data)
+
+        # Step 4: Create weather data
+        analysed_weather = {
+            "rainfall": analysis_result["rainfall_smoothed"],
+            "lightning": analysis_result["lightning"],
+            "water_level": analysis_result["water_level_smoothed"],
+            "soil_saturation": analysis_result["soil_saturation_smoothed"],
+        }
+
+        # Step 5: Generate forecast
+        forecast_result = predict_flood_forecast(
+            street=street_data,
+            weather=analysed_weather
+        )
+
+        # Step 6: Return results
+        return jsonify({
+            "analysis": analysis_result,
+            "forecast": forecast_result
+        }), 200
+
+    except ValueError as error:
+        return jsonify({
+            "error": str(error)
+        }), 400
 
     except Exception as error:
         return jsonify({
