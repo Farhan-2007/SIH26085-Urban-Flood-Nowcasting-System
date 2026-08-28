@@ -1,36 +1,142 @@
 import pandas as pd
-
+from pathlib import Path
 
 # ---------------------------------------------------------------------------
 # SAMPLE / IMAGINARY INPUT DATA   (TODO: replace with real input later)
 # ---------------------------------------------------------------------------
 
 # One fictional street, used to test the module end-to-end today.
-SAMPLE_STREET = {
-    "location_id": "RD-001",
-    "location_name": "Sample Street A (imaginary)",
-    "latitude": 19.0000,
-    "longitude": 72.8000,
-    "age_years": 2,                    # constructed 2 years ago
-    "years_since_maintenance": 2,      # never repaired since creation
-    "population_density": 18500,       # people / sq.km
-    "avg_population_density": 12000,   # city average, for comparison
-    "elevation": 8,                    # metres (low-lying)
-    "slope": 1.2,                      # percent (very flat -> poor natural drainage)
-    "imperviousness": 0.82,            # 82% paved / built-up surface
-    "drainage_capacity": 50,           # design capacity, mm/hr, before degradation
-}
+# SAMPLE_STREET = {
+#     "location_id": "RD-001",
+#     "location_name": "Sample Street A (imaginary)",
+#     "latitude": 19.0000,
+#     "longitude": 72.8000,
+#     "age_years": 2,                    # constructed 2 years ago
+#     "years_since_maintenance": 2,      # never repaired since creation
+#     "population_density": 18500,       # people / sq.km
+#     "avg_population_density": 12000,   # city average, for comparison
+#     "elevation": 8,                    # metres (low-lying)
+#     "slope": 1.2,                      # percent (very flat -> poor natural drainage)
+#     "imperviousness": 0.82,            # 82% paved / built-up surface
+#     "drainage_capacity": 50,           # design capacity, mm/hr, before degradation
+# }
 
-# Imaginary weather snapshot for "now". TODO: replace with live rainfall input.
-SAMPLE_WEATHER = {
-    "rainfall": 100,          # mm (heavy rainfall event)
-    "lightning": True,        # flag only -> used for alert severity, not risk math
-    "water_level": 0.6,       # 0-1, fraction of drain/channel already full
-    "soil_saturation": 0.55,  # 0-1, how saturated the ground already is
-}
+# # Imaginary weather snapshot for "now". TODO: replace with live rainfall input.
+# SAMPLE_WEATHER = {
+#     "rainfall": 100,          # mm (heavy rainfall event)
+#     "lightning": True,        # flag only -> used for alert severity, not risk math
+#     "water_level": 0.6,       # 0-1, fraction of drain/channel already full
+#     "soil_saturation": 0.55,  # 0-1, how saturated the ground already is
+# }
 
 FORECAST_INTERVALS = [0, 30, 60, 120, 180]  # minutes: Now, 30, 60, 120, 180
 
+# ---------------------------------------------------------------------------
+# DATASET LOADER
+# ---------------------------------------------------------------------------
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
+FEATURES_FILE = (
+    PROJECT_ROOT
+    / "datasets"
+    / "processed"
+    / "flood_features.csv"
+)
+
+FORECAST_FILE = (
+    PROJECT_ROOT
+    / "data"
+    / "raw"
+    / "sample_forecast.csv"
+)
+
+
+class DatasetLoader:
+    """
+    Loads location/environmental data and forecast data
+    from the project CSV files.
+    """
+
+    def __init__(self):
+        self.features_df = pd.read_csv(FEATURES_FILE)
+        self.forecast_df = pd.read_csv(FORECAST_FILE)
+
+    def get_street(self, location_id: str) -> dict:
+        """
+        Returns static/location information for one location.
+        """
+
+        row = self.features_df[
+            self.features_df["location_id"] == location_id
+        ]
+
+        if row.empty:
+            raise ValueError(
+                f"Location {location_id} not found in dataset"
+            )
+
+        row = row.iloc[0]
+
+        return {
+            "location_id": row["location_id"],
+            "location_name": row["location_name"],
+            "latitude": float(row["latitude"]),
+            "longitude": float(row["longitude"]),
+
+            "elevation": float(row["elevation"]),
+            "slope": float(row["slope"]),
+            "imperviousness": float(row["imperviousness"]),
+            "drainage_capacity": float(row["drainage_capacity"]),
+
+            # These fields are not currently available
+            # in the dataset, so safe default values are used.
+            "years_since_maintenance": 2,
+            "population_density": 12000,
+            "avg_population_density": 12000,
+        }
+
+    def get_current_weather(self, location_id: str) -> dict:
+        """
+        Gets current environmental/weather values
+        from flood_features.csv.
+        """
+
+        row = self.features_df[
+            self.features_df["location_id"] == location_id
+        ]
+
+        if row.empty:
+            raise ValueError(
+                f"Location {location_id} not found in dataset"
+            )
+
+        row = row.iloc[0]
+
+        return {
+            "rainfall": float(row["rainfall"]),
+            "water_level": float(row["water_level"]),
+            "soil_saturation": float(
+                row["soil_saturation"]
+            ),
+
+            # Dataset currently has no lightning field.
+            "lightning": False,
+        }
+
+    def get_forecast(self, location_id: str) -> list:
+        """
+        Returns actual forecast rainfall values
+        for one location.
+        """
+
+        rows = self.forecast_df[
+            self.forecast_df["location_id"] == location_id
+        ].sort_values("forecast_minutes")
+
+        return rows.to_dict(
+            orient="records"
+        )
 
 # ---------------------------------------------------------------------------
 # CLASS 1 -- FactorAnalyzer
@@ -115,8 +221,12 @@ class FactorAnalyzer:
 # Weighted average -> risk_score / risk_level, plus forecast + trend status
 # ---------------------------------------------------------------------------
 class RiskAggregator:
-    def __init__(self, analyzer: FactorAnalyzer):
+    def __init__(self,analyzer: FactorAnalyzer,forecast_data=None):
         self.analyzer = analyzer
+
+        self.forecast_data = {
+            row["forecast_minutes"]: row["rainfall"]
+            for row in (forecast_data or [])
 
     @staticmethod
     def _classify(risk_score: float) -> str:
@@ -128,13 +238,16 @@ class RiskAggregator:
             return "High"
         return "Critical"
 
-    @staticmethod
-    def _rainfall_at(base_rainfall: float, minutes: int) -> float:
-        """Placeholder rainfall-decay curve (no real forecast API yet).
-        TODO: replace with actual weather forecast input later.
-        Assumes the storm gradually tapers off after peaking now."""
-        decay = {0: 1.0, 30: 0.9, 60: 0.75, 120: 0.5, 180: 0.3}
-        return round(base_rainfall * decay.get(minutes, 0.3), 1)
+   def _rainfall_at(self,base_rainfall: float,minutes: int) -> float:
+        """Uses dataset forecast rainfall when available.
+        Falls back to current rainfall otherwise."""
+
+        if minutes in self.forecast_data:
+            return float(
+                self.forecast_data[minutes]
+            )
+
+        return float(base_rainfall)
 
     @staticmethod
     def _soil_saturation_at(base_saturation: float, minutes: int) -> float:
@@ -186,11 +299,11 @@ class RiskAggregator:
 # Input/output handling using pandas. Orchestrates Class 1 + Class 2.
 # ---------------------------------------------------------------------------
 class PredictorIO:
-    def __init__(self, street: dict, weather: dict):
+    def __init__(self, street: dict, weather: dict,forecast_data=None):
         self.street = street
         self.weather = weather
         self.analyzer = FactorAnalyzer(street, weather)
-        self.aggregator = RiskAggregator(self.analyzer)
+        self.aggregator = RiskAggregator(self.analyzer,forecast_data)
 
     def run(self) -> pd.DataFrame:
         """Runs the full forecast and returns a tidy pandas DataFrame,
@@ -224,13 +337,27 @@ def predict_flood_forecast(street: dict, weather: dict) -> list:
     predictor = PredictorIO(street, weather)
     return predictor.to_dict_records()
 
+def predict_from_dataset(location_id: str) -> list:
+    """Main dataset-based prediction function.
+
+    Usage:
+        predict_from_dataset("L001")
+    """
+
+    loader = DatasetLoader()
+
+    street = loader.get_street(location_id)
+
+    weather = loader.get_current_weather(location_id)
+
+    forecast_data = loader.get_forecast(location_id)
+
+    predictor = PredictorIO(street=street,weather=weather,forecast_data=forecast_data)
+
+    return predictor.to_dict_records()
 # ---------------------------------------------------------------------------
 # DEMO -- run standalone to sanity-check today's output
 # ---------------------------------------------------------------------------
 if __name__ == "__main__":
-    predictor = PredictorIO(SAMPLE_STREET, SAMPLE_WEATHER)
-    forecast_df = predictor.run()
-
-    pd.set_option("display.max_columns", None)
-    pd.set_option("display.width", 120)
-    print(forecast_df.to_string(index=False))
+    result = predict_from_dataset("L001")
+    print(pd.DataFrame(result).to_string(index=False))
