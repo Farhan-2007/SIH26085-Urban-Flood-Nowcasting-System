@@ -1,77 +1,53 @@
 import { CircleMarker, Popup } from "react-leaflet";
 import { getRiskColor } from "./riskColor";
+import { locations } from "./location";
 
 function normalizeRiskLevel(level, score) {
   const normalized = String(level || "").toUpperCase();
 
-  // Already valid GIS risk levels
+  if (normalized === "MODERATE") return "MEDIUM";
+
   if (["LOW", "MEDIUM", "HIGH", "CRITICAL"].includes(normalized)) {
     return normalized;
   }
 
-  // Convert Analyser conditions to GIS risk levels
-  if (normalized === "NORMAL") return "LOW";
-  if (normalized === "WATCH") return "MEDIUM";
-  if (normalized === "WARNING") return "HIGH";
-  if (normalized === "SEVERE") return "CRITICAL";
-
-  // Fallback: determine level from risk score
-  if (typeof score === "number") {
-    if (score >= 80) return "CRITICAL";
-    if (score >= 60) return "HIGH";
-    if (score >= 30) return "MEDIUM";
-    return "LOW";
-  }
+  if (score >= 80) return "CRITICAL";
+  if (score >= 60) return "HIGH";
+  if (score >= 30) return "MEDIUM";
 
   return "LOW";
 }
 
-export default function LocationMarkers({
-  zones,
-  activeRiskScore,
-  activeRiskLevel,
-  forecastLabel,
-}) {
-  if (!zones || zones.length === 0) {
-    return null;
-  }
-
+export default function LocationMarkers({ forecastLabel }) {
   return (
     <>
-      {zones.map((zone) => {
-        // Prototype conversion:
-        // x/y are relative positions, not real GPS coordinates.
-        const lat = 19.076 + (50 - zone.y) * 0.01;
-        const lng = 72.8777 + (zone.x - 50) * 0.01;
-
-        /*
-         * Use selected NOW / forecast risk.
-         */
-        const riskScore =
-          typeof activeRiskScore === "number"
-            ? activeRiskScore
-            : zone.riskScore;
-
+      {locations.map((location) => {
+        const riskScore = location.risk_score;
         const riskLevel = normalizeRiskLevel(
-          activeRiskLevel,
+          location.risk_level,
           riskScore
         );
-
         const markerColor = getRiskColor(riskLevel);
+        const isHotspot = riskScore >= 70;
 
         return (
           <CircleMarker
-            key={zone.id}
-            center={[lat, lng]}
-            radius={10}
+            key={location.location_id}
+            center={[location.latitude, location.longitude]}
+            radius={isHotspot ? 14 : 10}
             pathOptions={{
               color: markerColor,
               fillColor: markerColor,
-              fillOpacity: 0.7,
+              fillOpacity: 0.8,
+              weight: isHotspot ? 4 : 2,
             }}
           >
             <Popup>
-              <strong>{zone.name}</strong>
+              <strong>{location.location_name}</strong>
+
+              <br />
+
+              Location ID: {location.location_id}
 
               <br />
 
@@ -83,7 +59,14 @@ export default function LocationMarkers({
 
               <br />
 
-              Risk Score: {Number(riskScore).toFixed(1)}/100
+              Risk Score: {riskScore}/100
+
+              {isHotspot && (
+                <>
+                  <br />
+                  <strong>🔥 FLOOD HOTSPOT</strong>
+                </>
+              )}
             </Popup>
           </CircleMarker>
         );

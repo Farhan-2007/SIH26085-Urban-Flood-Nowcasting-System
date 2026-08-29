@@ -1,6 +1,7 @@
 import { MapContainer, TileLayer } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import LocationMarkers from "./LocationMarkers";
+import MapLegend from "./MapLegend";
 
 export default function GISMap({
   zones,
@@ -47,6 +48,7 @@ export default function GISMap({
         activeRiskLevel={activeRiskLevel}
         forecastLabel={selected?.label}
       />
+    <MapLegend />
     </MapContainer>
   );
 }
