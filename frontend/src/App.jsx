@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 import Header from "./components/Header";
 import SystemInfoBar from "./components/SystemInfoBar";
 import RiskOverview from "./components/RiskOverview";
@@ -8,9 +10,19 @@ import ForecastTimeline from "./components/ForecastTimeline";
 import AlertsPanel from "./components/AlertsPanel";
 import Footer from "./components/Footer";
 import { useDashboardData } from "./hooks/useDashboardData";
+import RoutePanel from "./components/RoutePanel";
+
 import "./App.css";
 
+
 export default function App() {
+
+  const [
+    routeData,
+    setRouteData,
+  ] = useState(null);
+
+
   const {
     loading,
     systemInfo,
@@ -28,31 +40,47 @@ export default function App() {
     handleSelectLocation,
   } = useDashboardData();
 
+
   if (loading) {
     return (
       <div className="app-loading">
-        <span className="mono">Loading nowcasting data…</span>
+        <span className="mono">
+          Loading nowcasting data…
+        </span>
       </div>
     );
   }
 
+
   return (
     <>
-      <Header systemInfo={systemInfo} />
-      <SystemInfoBar systemInfo={systemInfo} lastUpdated={lastUpdated} />
+      <Header
+        systemInfo={systemInfo}
+      />
+
+      <SystemInfoBar
+        systemInfo={systemInfo}
+        lastUpdated={lastUpdated}
+      />
+
 
       <main className="dashboard">
+
         <div className="dashboard__row dashboard__row--top">
+
           <RiskOverview
             selected={selected}
             analysis={analysis}
           />
+
         </div>
+
 
         <RiskFactorsPanel
           selected={selected}
           analysis={analysis}
         />
+
 
         <RainfallPanel
           selected={selected}
@@ -60,12 +88,26 @@ export default function App() {
           analysis={analysis}
         />
 
+
+        {/* GIS MAP */}
         <FloodMap
           locations={locations}
           selected={selected}
           selectedLocation={selectedLocation}
           onSelectLocation={handleSelectLocation}
+          routeData={routeData}
         />
+
+
+        {/* SAFE ROUTING */}
+        <RoutePanel
+          locations={locations}
+          selectedLocation={selectedLocation}
+          selected={selected}
+          routeData={routeData}
+          onRouteDataChange={setRouteData}
+        />
+
 
         <ForecastTimeline
           timeline={timeline}
@@ -73,10 +115,18 @@ export default function App() {
           onSelectStep={setSelectedStep}
         />
 
-        <AlertsPanel alerts={alerts} />
+
+        <AlertsPanel
+          alerts={alerts}
+        />
+
       </main>
 
-      <Footer systemInfo={systemInfo} />
+
+      <Footer
+        systemInfo={systemInfo}
+      />
+
     </>
   );
 }

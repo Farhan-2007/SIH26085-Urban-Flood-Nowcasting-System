@@ -6,6 +6,7 @@ export default function FloodMap({
   selected,
   selectedLocation,
   onSelectLocation,
+  routeData,
 }) {
   return (
     <section className="panel flood-map">
@@ -14,8 +15,9 @@ export default function FloodMap({
 
         <span className="eyebrow">
           {selectedLocation
-            ? `Selected: ${selectedLocation.location_name} • ${selected?.label || "NOW"
-            }`
+            ? `Selected: ${selectedLocation.location_name} • ${
+                selected?.label || "NOW"
+              }`
             : "Select a location on the map"}
         </span>
       </div>
@@ -26,6 +28,7 @@ export default function FloodMap({
           selected={selected}
           selectedLocation={selectedLocation}
           onSelectLocation={onSelectLocation}
+          routeData={routeData}
         />
       </div>
     </section>

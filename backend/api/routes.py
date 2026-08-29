@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 
-from routing.routing_engine import build_routing_report
+from backend.routing.routing_engine import build_routing_report
 from .validator import validate_flood_input
 from backend.flood_engine import predict_flood_risk
 
@@ -142,14 +142,13 @@ def analyse():
         # STEP 1: Load location from dataset
         # ----------------------------------------------------
 
-        analyser_loader = (
-            AnalyserDatasetLoader()
-        )
+        analyser_loader = AnalyserDatasetLoader()
 
-        street_data = (
-            analyser_loader.get_street(
-                location_id
-            )
+        predictor_loader = DatasetLoader()
+
+        # Full street data required by Predictor
+        street_data = predictor_loader.get_street(
+            location_id
         )
 
         # ----------------------------------------------------
@@ -269,10 +268,6 @@ def analyse():
         # STEP 7: Load actual forecast rainfall
         # ----------------------------------------------------
 
-        predictor_loader = (
-            DatasetLoader()
-        )
-
         forecast_data = (
             predictor_loader.get_forecast(
                 location_id
@@ -356,6 +351,12 @@ def routing():
         "end_id"
     )
 
+    forecast_minutes = request.args.get(
+    "forecast_minutes",
+    default=0,
+    type=int
+)
+
     if not start_id or not end_id:
 
         return jsonify({
@@ -368,9 +369,30 @@ def routing():
         report = (
             build_routing_report(
                 start_id=start_id,
-                end_id=end_id
+                end_id=end_id,
+                forecast_minutes=forecast_minutes
             )
         )
+
+        valid_intervals = [
+            0,
+            30,
+            60,
+            120,
+            180,
+        ]
+
+        if forecast_minutes not in valid_intervals:
+
+            return jsonify({
+
+                "error":
+                    (
+                        "forecast_minutes must be "
+                        "0, 30, 60, 120, or 180"
+                    )
+
+            }), 400
 
         return jsonify(
             report

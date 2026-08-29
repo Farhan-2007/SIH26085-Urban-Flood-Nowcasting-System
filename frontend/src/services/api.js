@@ -15,17 +15,30 @@ import {
   LAST_UPDATED,
 } from "../data/mockData";
 
+
 // Flask backend API
-const API_BASE_URL = "http://127.0.0.1:5000/api";
+const API_BASE_URL =
+  "http://127.0.0.1:5000/api";
+
 
 // Simulates network latency for mock data
 const MOCK_LATENCY_MS = 150;
 
+
 function resolveMock(value) {
-  return new Promise((resolve) =>
-    setTimeout(() => resolve(value), MOCK_LATENCY_MS)
+
+  return new Promise(
+    (resolve) =>
+
+      setTimeout(
+        () => resolve(value),
+        MOCK_LATENCY_MS
+      )
+
   );
+
 }
+
 
 // --------------------------------------------------
 // Backend Flood Risk Prediction
@@ -37,99 +50,224 @@ export async function predictFloodRisk({
   water_level,
   forecast_rainfall,
 }) {
-  const response = await fetch(`${API_BASE_URL}/predict`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      rainfall,
-      rainfall_intensity,
-      water_level,
-      forecast_rainfall,
-    }),
-  });
 
-  const data = await response.json();
+  const response = await fetch(
+    `${API_BASE_URL}/predict`,
+    {
+
+      method: "POST",
+
+      headers: {
+
+        "Content-Type":
+          "application/json",
+
+      },
+
+      body: JSON.stringify({
+
+        rainfall,
+
+        rainfall_intensity,
+
+        water_level,
+
+        forecast_rainfall,
+
+      }),
+
+    }
+  );
+
+
+  const data =
+    await response.json();
+
 
   if (!response.ok) {
-    throw new Error(data.error || "Failed to predict flood risk");
+
+    throw new Error(
+
+      data.error ||
+      "Failed to predict flood risk"
+
+    );
+
   }
 
+
   return data;
+
 }
+
+
+// --------------------------------------------------
+// Backend Forecast
+// --------------------------------------------------
 
 export async function getBackendForecast() {
-  const response = await fetch(`${API_BASE_URL}/forecast`);
 
-  const data = await response.json();
+  const response =
+    await fetch(
+      `${API_BASE_URL}/forecast`
+    );
+
+
+  const data =
+    await response.json();
+
 
   if (!response.ok) {
-    throw new Error(data.error || "Failed to load flood forecast");
+
+    throw new Error(
+
+      data.error ||
+      "Failed to load flood forecast"
+
+    );
+
   }
 
+
   return data;
+
 }
+
 
 // --------------------------------------------------
 // Mock Dashboard Data
 // --------------------------------------------------
 
 export async function getSystemInfo() {
-  return resolveMock(SYSTEM_INFO);
+
+  return resolveMock(
+    SYSTEM_INFO
+  );
+
 }
 
+
 export async function getForecastTimeline() {
-  return resolveMock(FORECAST_TIMELINE);
+
+  return resolveMock(
+    FORECAST_TIMELINE
+  );
+
 }
+
 
 export async function getRainfallHistory(
   locationId = "L001"
 ) {
-  const response = await fetch(
-    `${API_BASE_URL}/rainfall/history?location_id=${locationId}`
-  );
 
-  const data = await response.json();
+  const response =
+    await fetch(
+
+      `${API_BASE_URL}/rainfall/history?location_id=${locationId}`
+
+    );
+
+
+  const data =
+    await response.json();
+
 
   if (!response.ok) {
+
     throw new Error(
+
       data.error ||
       "Failed to load rainfall history"
+
     );
+
   }
+
 
   return data.history;
+
 }
+
+
 export async function getAlerts() {
-  return resolveMock(ALERTS);
+
+  return resolveMock(
+    ALERTS
+  );
+
 }
+
 
 export async function getRiskZones() {
-  return resolveMock(RISK_ZONES);
+
+  return resolveMock(
+    RISK_ZONES
+  );
+
 }
+
 
 export async function getLastUpdated() {
-  return resolveMock(LAST_UPDATED);
+
+  return resolveMock(
+    LAST_UPDATED
+  );
+
 }
 
-export async function analyseFloodConditions(data) {
-  const response = await fetch(`${API_BASE_URL}/analyse`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(data),
-  });
 
-  const result = await response.json();
+// --------------------------------------------------
+// Backend Predictor-Analyser
+// --------------------------------------------------
+
+export async function analyseFloodConditions(
+  data
+) {
+
+  const response =
+    await fetch(
+
+      `${API_BASE_URL}/analyse`,
+
+      {
+
+        method: "POST",
+
+        headers: {
+
+          "Content-Type":
+            "application/json",
+
+        },
+
+        body:
+          JSON.stringify(data),
+
+      }
+
+    );
+
+
+  const result =
+    await response.json();
+
 
   if (!response.ok) {
-    throw new Error(result.error || "Failed to analyse flood conditions");
+
+    throw new Error(
+
+      result.error ||
+      "Failed to analyse flood conditions"
+
+    );
+
   }
 
+
   return result;
+
 }
+
 
 // --------------------------------------------------
 // Backend GIS Location Risk Data
@@ -138,20 +276,35 @@ export async function analyseFloodConditions(data) {
 export async function getLocationsRisk(
   forecastMinutes = 0
 ) {
-  const response = await fetch(
-    `${API_BASE_URL}/locations/risk?forecast_minutes=${forecastMinutes}`
-  );
 
-  const data = await response.json();
+  const response =
+    await fetch(
+
+      `${API_BASE_URL}/locations/risk?forecast_minutes=${forecastMinutes}`
+
+    );
+
+
+  const data =
+    await response.json();
+
 
   if (!response.ok) {
+
     throw new Error(
-      data.error || "Failed to load location risks"
+
+      data.error ||
+      "Failed to load location risks"
+
     );
+
   }
 
+
   return data.locations;
+
 }
+
 
 // --------------------------------------------------
 // Backend Safe Routing
@@ -159,10 +312,11 @@ export async function getLocationsRisk(
 
 export async function getSafeRoute(
   startId,
-  endId
+  endId,
+  forecastMinutes = 0
 ) {
   const response = await fetch(
-    `${API_BASE_URL}/routing?start_id=${startId}&end_id=${endId}`
+    `${API_BASE_URL}/routing?start_id=${startId}&end_id=${endId}&forecast_minutes=${forecastMinutes}`
   );
 
   const data = await response.json();

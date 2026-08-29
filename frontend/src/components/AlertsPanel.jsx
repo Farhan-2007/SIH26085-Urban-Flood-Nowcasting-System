@@ -7,35 +7,90 @@ const SEVERITY_COLOR_VAR = {
   LOW: "--color-risk-low",
 };
 
-export default function AlertsPanel({ alerts }) {
+export default function AlertsPanel({ alerts = [] }) {
+  const uniqueAlerts = Array.from(
+    new Map(
+      alerts.map((alert) => [
+        alert.id,
+        alert,
+      ])
+    ).values()
+  );
+
   return (
-    <section className="panel" aria-labelledby="alerts-heading">
+    <section
+      className="panel"
+      aria-labelledby="alerts-heading"
+    >
       <div className="panel-header">
-        <h2 id="alerts-heading">Alerts &amp; Warnings</h2>
+        <h2 id="alerts-heading">
+          Alerts &amp; Warnings
+        </h2>
+
         <span className="eyebrow">
-          {alerts.length} Active · Live Risk Data
+          {uniqueAlerts.length} Active · Live Risk Data
         </span>
       </div>
+
       <div className="panel-body alerts-panel__body">
-        {alerts.length === 0 && <p className="alerts-panel__empty">No active alerts for the monitored zone.</p>}
-        {alerts.map((alert) => {
-          const colorVar = SEVERITY_COLOR_VAR[alert.severity] || "--color-info";
+
+        {uniqueAlerts.length === 0 && (
+          <p className="alerts-panel__empty">
+            No active alerts for the monitored zone.
+          </p>
+        )}
+
+        {uniqueAlerts.map((alert) => {
+          const colorVar =
+            SEVERITY_COLOR_VAR[
+              alert.severity
+            ] || "--color-info";
+
           return (
-            <div className="alert-item" key={alert.id} style={{ borderLeftColor: `var(${colorVar})` }}>
+            <div
+              className="alert-item"
+              key={alert.id}
+              style={{
+                borderLeftColor:
+                  `var(${colorVar})`,
+              }}
+            >
               <div className="alert-item__top">
-                <span className="alert-item__title" style={{ color: `var(${colorVar})` }}>
+
+                <span
+                  className="alert-item__title"
+                  style={{
+                    color:
+                      `var(${colorVar})`,
+                  }}
+                >
                   {alert.title}
                 </span>
-                <span className="mono alert-item__time">{alert.time}</span>
+
+                <span className="mono alert-item__time">
+                  {alert.time}
+                </span>
+
               </div>
-              <p className="alert-item__message">{alert.message}</p>
+
+              <p className="alert-item__message">
+                {alert.message}
+              </p>
+
               <div className="alert-item__meta">
-                <span>Zone: {alert.zone}</span>
-                <span className="mono">{alert.id}</span>
+                <span>
+                  Zone: {alert.zone}
+                </span>
+
+                <span className="mono">
+                  {alert.id}
+                </span>
               </div>
+
             </div>
           );
         })}
+
       </div>
     </section>
   );
