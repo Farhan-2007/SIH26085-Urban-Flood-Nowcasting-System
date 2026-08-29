@@ -1,9 +1,10 @@
 import pandas as pd
+from pathlib import Path
 
 
 # ---------------------------------------------------------------------------
-# SAMPLE / IMAGINARY INPUT DATA
-# TODO: Replace with real data / API data later
+# SAMPLE DATA
+# Used as fallback/demo data
 # ---------------------------------------------------------------------------
 
 SAMPLE_STREET = {
@@ -35,7 +36,10 @@ SAMPLE_WEATHER = {
 }
 
 
-# Forecast points
+# ---------------------------------------------------------------------------
+# FORECAST INTERVALS
+# ---------------------------------------------------------------------------
+
 FORECAST_INTERVALS = [
     0,
     30,
@@ -46,24 +50,188 @@ FORECAST_INTERVALS = [
 
 
 # ---------------------------------------------------------------------------
-# CLASS 1 -- FactorAnalyzer
+# DATASET PATHS
+# ---------------------------------------------------------------------------
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
+FEATURES_FILE = (
+    PROJECT_ROOT
+    / "datasets"
+    / "processed"
+    / "flood_features.csv"
+)
+
+FORECAST_FILE = (
+    PROJECT_ROOT
+    / "data"
+    / "raw"
+    / "sample_forecast.csv"
+)
+
+
+# ---------------------------------------------------------------------------
+# DATASET LOADER
+# ---------------------------------------------------------------------------
+
+class DatasetLoader:
+
+    """
+    Loads location/environmental data and forecast data
+    from project CSV files.
+    """
+
+    def __init__(self):
+
+        self.features_df = pd.read_csv(
+            FEATURES_FILE
+        )
+
+        self.forecast_df = pd.read_csv(
+            FORECAST_FILE
+        )
+
+
+    def get_street(
+        self,
+        location_id: str
+    ) -> dict:
+
+        row = self.features_df[
+            self.features_df["location_id"]
+            == location_id
+        ]
+
+        if row.empty:
+
+            raise ValueError(
+                f"Location {location_id} not found in dataset"
+            )
+
+        row = row.iloc[0]
+
+        return {
+
+            "location_id":
+                row["location_id"],
+
+            "location_name":
+                row["location_name"],
+
+            "latitude":
+                float(row["latitude"]),
+
+            "longitude":
+                float(row["longitude"]),
+
+
+            "elevation":
+                float(row["elevation"]),
+
+            "slope":
+                float(row["slope"]),
+
+            "imperviousness":
+                float(row["imperviousness"]),
+
+            "drainage_capacity":
+                float(row["drainage_capacity"]),
+
+
+            # Default values until dataset contains them
+            "years_since_maintenance":
+                2,
+
+            "population_density":
+                12000,
+
+            "avg_population_density":
+                12000,
+
+        }
+
+
+    def get_current_weather(
+        self,
+        location_id: str
+    ) -> dict:
+
+        row = self.features_df[
+            self.features_df["location_id"]
+            == location_id
+        ]
+
+        if row.empty:
+
+            raise ValueError(
+                f"Location {location_id} not found in dataset"
+            )
+
+        row = row.iloc[0]
+
+        return {
+
+            "rainfall":
+                float(row["rainfall"]),
+
+            "water_level":
+                float(row["water_level"]),
+
+            "soil_saturation":
+                float(row["soil_saturation"]),
+
+            "lightning":
+                False,
+
+        }
+
+
+    def get_forecast(
+        self,
+        location_id: str
+    ) -> list:
+
+        rows = self.forecast_df[
+            self.forecast_df["location_id"]
+            == location_id
+        ].sort_values(
+            "forecast_minutes"
+        )
+
+        return rows.to_dict(
+            orient="records"
+        )
+
+
+# ---------------------------------------------------------------------------
+# FACTOR ANALYZER
 # ---------------------------------------------------------------------------
 
 class FactorAnalyzer:
 
-    """
-    Converts street and weather data into
-    normalized flood-risk factors.
-    """
-
     WEIGHTS = {
-        "rainfall_intensity": 0.25,
-        "runoff_ratio": 0.20,
-        "drainage_deficit": 0.20,
-        "soil_saturation": 0.10,
-        "imperviousness": 0.10,
-        "infrastructure_condition": 0.10,
-        "population_density_impact": 0.05,
+
+        "rainfall_intensity":
+            0.25,
+
+        "runoff_ratio":
+            0.20,
+
+        "drainage_deficit":
+            0.20,
+
+        "soil_saturation":
+            0.10,
+
+        "imperviousness":
+            0.10,
+
+        "infrastructure_condition":
+            0.10,
+
+        "population_density_impact":
+            0.05,
+
     }
 
 
@@ -77,18 +245,18 @@ class FactorAnalyzer:
         self.weather = weather
 
 
-    def _maintenance_factor(self) -> float:
-
-        """
-        Drainage capacity decreases when
-        maintenance has not been performed.
-        """
+    def _maintenance_factor(
+        self
+    ) -> float:
 
         deficit = (
+
             0.05
+
             * self.street[
                 "years_since_maintenance"
             ]
+
         )
 
         return max(
@@ -111,11 +279,14 @@ class FactorAnalyzer:
         # ------------------------------------------------
 
         slope_factor = (
+
             1
+
             - min(
                 street["slope"] / 10,
                 1,
             )
+
         )
 
 
@@ -141,12 +312,15 @@ class FactorAnalyzer:
             ),
 
             1.0,
+
         )
 
 
         surface_runoff = (
+
             rainfall
             * runoff_coeff
+
         )
 
 
@@ -155,7 +329,9 @@ class FactorAnalyzer:
         # ------------------------------------------------
 
         maintenance_factor = (
+
             self._maintenance_factor()
+
         )
 
 
@@ -196,7 +372,7 @@ class FactorAnalyzer:
 
 
         # ------------------------------------------------
-        # NORMALIZED RISK FACTORS
+        # NORMALIZED VALUES
         # ------------------------------------------------
 
         values = {
@@ -286,9 +462,7 @@ class FactorAnalyzer:
                     value,
 
                 "weight":
-                    self.WEIGHTS[
-                        name
-                    ],
+                    self.WEIGHTS[name],
 
             }
 
@@ -298,10 +472,6 @@ class FactorAnalyzer:
 
         }
 
-
-        # ------------------------------------------------
-        # RAW PHYSICAL VALUES
-        # ------------------------------------------------
 
         factors["_raw"] = {
 
@@ -343,7 +513,7 @@ class FactorAnalyzer:
 
 
 # ---------------------------------------------------------------------------
-# CLASS 2 -- RiskAggregator
+# RISK AGGREGATOR
 # ---------------------------------------------------------------------------
 
 class RiskAggregator:
@@ -352,30 +522,45 @@ class RiskAggregator:
     def __init__(
         self,
         analyzer: FactorAnalyzer,
+        forecast_data=None,
     ):
 
         self.analyzer = analyzer
 
 
-    # ------------------------------------------------
-    # CLASSIFY RISK
-    # ------------------------------------------------
+        # Convert forecast CSV rows into dictionary
+        self.forecast_data = {
+
+            int(
+                row["forecast_minutes"]
+            ):
+
+            float(
+                row["rainfall"]
+            )
+
+            for row
+
+            in (
+                forecast_data
+                or []
+            )
+
+        }
+
 
     @staticmethod
     def _classify(
-        risk_score: float,
+        risk_score: float
     ) -> str:
 
         if risk_score < 25:
-
             return "Low"
 
         elif risk_score < 50:
-
             return "Moderate"
 
         elif risk_score < 75:
-
             return "High"
 
         return "Critical"
@@ -392,11 +577,20 @@ class RiskAggregator:
     ) -> float:
 
         """
-        Dynamic rainfall forecast.
+        Uses actual dataset forecast when available.
 
-        Severe conditions can continue increasing,
-        while low rainfall conditions recede.
+        Otherwise uses the existing dynamic
+        rainfall trend model.
         """
+
+        if minutes in self.forecast_data:
+
+            return float(
+                self.forecast_data[
+                    minutes
+                ]
+            )
+
 
         street = self.analyzer.street
 
@@ -418,10 +612,6 @@ class RiskAggregator:
         ) / 3
 
 
-        # ---------------------------------------------
-        # SEVERE CONDITIONS
-        # ---------------------------------------------
-
         if (
 
             base_rainfall >= 80
@@ -435,55 +625,35 @@ class RiskAggregator:
             trend = {
 
                 0: 1.00,
-
                 30: 1.05,
-
                 60: 1.10,
-
                 120: 1.20,
-
                 180: 1.10,
 
             }
 
-
-        # ---------------------------------------------
-        # MODERATE CONDITIONS
-        # ---------------------------------------------
 
         elif base_rainfall >= 40:
 
             trend = {
 
                 0: 1.00,
-
                 30: 1.02,
-
                 60: 1.05,
-
                 120: 0.95,
-
                 180: 0.80,
 
             }
 
-
-        # ---------------------------------------------
-        # LOW CONDITIONS
-        # ---------------------------------------------
 
         else:
 
             trend = {
 
                 0: 1.00,
-
                 30: 0.90,
-
                 60: 0.75,
-
                 120: 0.55,
-
                 180: 0.35,
 
             }
@@ -571,7 +741,6 @@ class RiskAggregator:
         return min(
 
             base_saturation
-
             + increase,
 
             1.0,
@@ -580,7 +749,7 @@ class RiskAggregator:
 
 
     # ------------------------------------------------
-    # CALCULATE RISK AT A SPECIFIC TIME
+    # SCORE AT TIME
     # ------------------------------------------------
 
     def score_at(
@@ -617,15 +786,10 @@ class RiskAggregator:
         factors = self.analyzer.compute(
 
             rainfall,
-
             soil_saturation,
 
         )
 
-
-        # ---------------------------------------------
-        # BASE WEIGHTED RISK SCORE
-        # ---------------------------------------------
 
         risk_score = (
 
@@ -648,10 +812,6 @@ class RiskAggregator:
         )
 
 
-        # ---------------------------------------------
-        # FLOOD ACCUMULATION PRESSURE
-        # ---------------------------------------------
-
         drainage_used = (
 
             factors["_raw"][
@@ -673,8 +833,6 @@ class RiskAggregator:
         accumulation_pressure = 0
 
 
-        # Drainage overload
-
         if drainage_used >= 1.0:
 
             accumulation_pressure += min(
@@ -691,8 +849,6 @@ class RiskAggregator:
             )
 
 
-        # Excess water accumulation
-
         if excess_water >= 20:
 
             accumulation_pressure += min(
@@ -704,32 +860,17 @@ class RiskAggregator:
             )
 
 
-        # Longer flooding duration
-
         if minutes >= 60:
-
             accumulation_pressure += 3
 
-
         if minutes >= 120:
-
             accumulation_pressure += 5
-
 
         if minutes >= 180:
-
             accumulation_pressure += 5
 
 
-        # ---------------------------------------------
-        # FINAL SCORE
-        # ---------------------------------------------
-
-        risk_score += (
-
-            accumulation_pressure
-
-        )
+        risk_score += accumulation_pressure
 
 
         risk_score = round(
@@ -744,12 +885,8 @@ class RiskAggregator:
         )
 
 
-        risk_level = (
-
-            self._classify(
-                risk_score
-            )
-
+        risk_level = self._classify(
+            risk_score
         )
 
 
@@ -758,18 +895,14 @@ class RiskAggregator:
             "forecast_minutes":
                 minutes,
 
-
             "rainfall":
                 rainfall,
-
 
             "risk_score":
                 risk_score,
 
-
             "risk_level":
                 risk_level,
-
 
             **factors["_raw"],
 
@@ -777,7 +910,7 @@ class RiskAggregator:
 
 
     # ------------------------------------------------
-    # GENERATE COMPLETE FORECAST
+    # COMPLETE FORECAST
     # ------------------------------------------------
 
     def forecast(
@@ -788,10 +921,7 @@ class RiskAggregator:
         intervals = (
 
             intervals
-
-            or
-
-            FORECAST_INTERVALS
+            or FORECAST_INTERVALS
 
         )
 
@@ -809,15 +939,9 @@ class RiskAggregator:
         ]
 
 
-        # ---------------------------------------------
-        # DETERMINE TREND
-        # ---------------------------------------------
-
         for i, row in enumerate(
             results
         ):
-
-            # NOW
 
             if i == 0:
 
@@ -828,26 +952,18 @@ class RiskAggregator:
                 continue
 
 
-            previous = (
-
-                results[
-                    i - 1
-                ]
-
-            )
+            previous = results[
+                i - 1
+            ]
 
 
             delta = (
 
-                row[
-                    "risk_score"
-                ]
+                row["risk_score"]
 
                 -
 
-                previous[
-                    "risk_score"
-                ]
+                previous["risk_score"]
 
             )
 
@@ -858,13 +974,11 @@ class RiskAggregator:
                     "prediction_status"
                 ] = "Intensifying"
 
-
             elif delta < -3:
 
                 row[
                     "prediction_status"
                 ] = "Receding"
-
 
             else:
 
@@ -877,7 +991,7 @@ class RiskAggregator:
 
 
 # ---------------------------------------------------------------------------
-# CLASS 3 -- PredictorIO
+# PREDICTOR IO
 # ---------------------------------------------------------------------------
 
 class PredictorIO:
@@ -887,46 +1001,33 @@ class PredictorIO:
         self,
         street: dict,
         weather: dict,
+        forecast_data=None,
     ):
 
         self.street = street
-
         self.weather = weather
 
 
-        self.analyzer = (
-
-            FactorAnalyzer(
-                street,
-                weather,
-            )
-
+        self.analyzer = FactorAnalyzer(
+            street,
+            weather,
         )
 
 
-        self.aggregator = (
+        self.aggregator = RiskAggregator(
 
-            RiskAggregator(
-                self.analyzer
-            )
+            self.analyzer,
+
+            forecast_data,
 
         )
 
 
     def run(
-        self,
+        self
     ) -> pd.DataFrame:
 
-        """
-        Runs the complete flood prediction
-        and returns a pandas DataFrame.
-        """
-
-        rows = (
-
-            self.aggregator.forecast()
-
-        )
+        rows = self.aggregator.forecast()
 
 
         df = pd.DataFrame(
@@ -964,9 +1065,10 @@ class PredictorIO:
             "lightning"
         ] = (
 
-            self.weather[
-                "lightning"
-            ]
+            self.weather.get(
+                "lightning",
+                False,
+            )
 
         )
 
@@ -974,25 +1076,15 @@ class PredictorIO:
         cols = [
 
             "location_id",
-
             "location_name",
-
             "forecast_minutes",
-
             "rainfall",
-
             "surface_runoff",
-
             "drainage_capacity_used",
-
             "excess_water",
-
             "risk_score",
-
             "risk_level",
-
             "prediction_status",
-
             "lightning",
 
         ]
@@ -1004,13 +1096,8 @@ class PredictorIO:
 
 
     def to_dict_records(
-        self,
+        self
     ) -> list:
-
-        """
-        Returns prediction as list of dictionaries.
-        Used by Flask API.
-        """
 
         return (
 
@@ -1028,27 +1115,69 @@ class PredictorIO:
 # ---------------------------------------------------------------------------
 
 def predict_flood_forecast(
+
     street: dict,
+
     weather: dict,
+
+    forecast_data=None,
+
 ) -> list:
 
-    """
-    Generate complete flood forecast
-    for one location.
-    """
 
     predictor = PredictorIO(
-        street,
-        weather,
+
+        street=street,
+
+        weather=weather,
+
+        forecast_data=forecast_data,
+
+    )
+
+
+    return predictor.to_dict_records()
+
+
+# ---------------------------------------------------------------------------
+# DATASET PREDICTION
+# ---------------------------------------------------------------------------
+
+def predict_from_dataset(
+    location_id: str
+) -> list:
+
+
+    loader = DatasetLoader()
+
+
+    street = loader.get_street(
+        location_id
     )
 
 
-    return (
+    weather = loader.get_current_weather(
+        location_id
+    )
 
-        predictor
-        .to_dict_records()
+
+    forecast_data = loader.get_forecast(
+        location_id
+    )
+
+
+    predictor = PredictorIO(
+
+        street=street,
+
+        weather=weather,
+
+        forecast_data=forecast_data,
 
     )
+
+
+    return predictor.to_dict_records()
 
 
 # ---------------------------------------------------------------------------
@@ -1057,37 +1186,16 @@ def predict_flood_forecast(
 
 if __name__ == "__main__":
 
-    predictor = PredictorIO(
-
-        SAMPLE_STREET,
-
-        SAMPLE_WEATHER,
-
-    )
-
-
-    forecast_df = (
-
-        predictor.run()
-
-    )
-
-
-    pd.set_option(
-        "display.max_columns",
-        None,
-    )
-
-
-    pd.set_option(
-        "display.width",
-        140,
+    result = predict_from_dataset(
+        "L001"
     )
 
 
     print(
 
-        forecast_df.to_string(
+        pd.DataFrame(
+            result
+        ).to_string(
             index=False
         )
 

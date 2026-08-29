@@ -1,6 +1,7 @@
 import math
+import pandas as pd
 from datetime import datetime
-
+from pathlib import Path
 
 # ---------------------------------------------------------------------------
 # MOCK / SAMPLE DATA
@@ -8,20 +9,20 @@ from datetime import datetime
 # Later this will come from APIs, sensors, or databases.
 # ---------------------------------------------------------------------------
 
-SAMPLE_STREET = {
-    "location_id": "RD-001",
-    "location_name": "Sample Street A (imaginary)",
-    "latitude": 19.0000,
-    "longitude": 72.8000,
-    "age_years": 2,
-    "years_since_maintenance": 2,
-    "population_density": 18500,
-    "avg_population_density": 12000,
-    "elevation": 8,
-    "slope": 1.2,
-    "imperviousness": 0.82,
-    "drainage_capacity": 50,
-}
+# SAMPLE_STREET = {
+#     "location_id": "RD-001",
+#     "location_name": "Sample Street A (imaginary)",
+#     "latitude": 19.0000,
+#     "longitude": 72.8000,
+#     "age_years": 2,
+#     "years_since_maintenance": 2,
+#     "population_density": 18500,
+#     "avg_population_density": 12000,
+#     "elevation": 8,
+#     "slope": 1.2,
+#     "imperviousness": 0.82,
+#     "drainage_capacity": 50,
+# }
 
 
 # ---------------------------------------------------------------------------
@@ -32,30 +33,153 @@ SAMPLE_STREET = {
 # Future: Weather API / sensors / government database
 # ---------------------------------------------------------------------------
 
-MOCK_REALTIME_DATA = [
-    {
-        "timestamp": "10:00",
-        "rainfall": 70,
-        "water_level": 0.35,
-        "soil_saturation": 0.40,
-        "lightning": False,
-    },
-    {
-        "timestamp": "10:10",
-        "rainfall": 85,
-        "water_level": 0.42,
-        "soil_saturation": 0.46,
-        "lightning": False,
-    },
-    {
-        "timestamp": "10:20",
-        "rainfall": 100,
-        "water_level": 0.60,
-        "soil_saturation": 0.55,
-        "lightning": True,
-    },
-]
+# MOCK_REALTIME_DATA = [
+#     {
+#         "timestamp": "10:00",
+#         "rainfall": 70,
+#         "water_level": 0.35,
+#         "soil_saturation": 0.40,
+#         "lightning": False,
+#     },
+#     {
+#         "timestamp": "10:10",
+#         "rainfall": 85,
+#         "water_level": 0.42,
+#         "soil_saturation": 0.46,
+#         "lightning": False,
+#     },
+#     {
+#         "timestamp": "10:20",
+#         "rainfall": 100,
+#         "water_level": 0.60,
+#         "soil_saturation": 0.55,
+#         "lightning": True,
+#     },
+# ]
 
+# ---------------------------------------------------------------------------
+# DATASET LOADER
+# ---------------------------------------------------------------------------
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
+FEATURES_FILE = (
+    PROJECT_ROOT
+    / "datasets"
+    / "processed"
+    / "flood_features.csv"
+)
+
+
+class AnalyserDatasetLoader:
+    """
+    Loads location and environmental observations
+    from flood_features.csv.
+    """
+
+    def __init__(self):
+        self.df = pd.read_csv(
+            FEATURES_FILE
+        )
+
+    def get_street(
+        self,
+        location_id: str
+    ) -> dict:
+
+        row = self.df[
+            self.df["location_id"] == location_id
+        ]
+
+        if row.empty:
+            raise ValueError(
+                f"Location {location_id} not found"
+            )
+
+        row = row.iloc[0]
+
+        return {
+            "location_id": row["location_id"],
+            "location_name": row["location_name"],
+
+            "slope": float(row["slope"]),
+            "imperviousness": float(
+                row["imperviousness"]
+            ),
+            "drainage_capacity": float(
+                row["drainage_capacity"]
+            ),
+
+            # Temporary defaults until the final
+            # infrastructure dataset is available.
+            "years_since_maintenance": 2,
+        }
+
+    def get_observation(
+        self,
+        location_id: str
+    ) -> dict:
+
+        row = self.df[
+            self.df["location_id"] == location_id
+        ]
+
+        if row.empty:
+            raise ValueError(
+                f"Location {location_id} not found"
+            )
+
+        row = row.iloc[0]
+
+        return {
+            "timestamp":
+                datetime.now().isoformat(),
+
+            "rainfall":
+                float(row["rainfall"]),
+
+            "water_level":
+                float(row["water_level"]),
+
+            "soil_saturation":
+                float(row["soil_saturation"]),
+
+            # Not currently present in dataset.
+            "lightning": False,
+        }
+
+    def get_all_observations(self) -> list:
+        """
+        Returns observations for all locations.
+        Useful for multi-location analysis later.
+        """
+
+        observations = []
+
+        for _, row in self.df.iterrows():
+
+            observations.append({
+                "location_id":
+                    row["location_id"],
+
+                "timestamp":
+                    datetime.now().isoformat(),
+
+                "rainfall":
+                    float(row["rainfall"]),
+
+                "water_level":
+                    float(row["water_level"]),
+
+                "soil_saturation":
+                    float(
+                        row["soil_saturation"]
+                    ),
+
+                "lightning": False,
+            })
+
+        return observations
 
 # ---------------------------------------------------------------------------
 # CLASS 1 -- DataValidator
@@ -555,7 +679,18 @@ class RealtimeAnalyser:
                 overall_trend
         }
 
+def analyse_location_from_dataset(location_id:str)-> dict:
+    """Analyse one location directly
+       from flood_features.csv"""
 
+    loader= AnalyserDatasetLoader()
+    street= loader.get_street(location_id)
+
+    observation = loader.get_observation(location_id)
+
+    analyser=RealtimeAnalyser(street=street,alpha=0.4)
+
+    return analyser.analyse(observation)
 # ---------------------------------------------------------------------------
 # DEMO
 #
@@ -564,75 +699,10 @@ class RealtimeAnalyser:
 
 if __name__ == "__main__":
 
-    analyser = RealtimeAnalyser(
-        SAMPLE_STREET,
-        alpha=0.4
-    )
+    result=analyse_location_from_dataset("L001")
 
-    print("\n" + "=" * 70)
-    print("REAL-TIME FLOOD ANALYSER DEMO")
-    print("=" * 70)
+    print("\n ANALYSIS RESULT\n")
 
-    for observation in MOCK_REALTIME_DATA:
-
-        result = analyser.analyse(
-            observation
-        )
-
-        print("\nTimestamp:", result["timestamp"])
-
-        print(
-            "Rainfall:",
-            result["rainfall_raw"],
-            "→ Smoothed:",
-            result["rainfall_smoothed"],
-            "|",
-            result["rainfall_trend"]
-        )
-
-        print(
-            "Water Level:",
-            result["water_level_raw"],
-            "→ Smoothed:",
-            result["water_level_smoothed"],
-            "|",
-            result["water_level_trend"]
-        )
-
-        print(
-            "Soil Saturation:",
-            result["soil_saturation_raw"],
-            "→ Smoothed:",
-            result["soil_saturation_smoothed"],
-            "|",
-            result["soil_saturation_trend"]
-        )
-
-        print(
-            "Surface Runoff:",
-            result["surface_runoff"]
-        )
-
-        print(
-            "Drainage Stress:",
-            result["drainage_stress"]
-        )
-
-        print(
-            "Flood Condition Index:",
-            result["flood_condition_index"]
-        )
-
-        print(
-            "Condition:",
-            result["condition"]
-        )
-
-        print(
-            "Overall Trend:",
-            result["overall_trend"]
-        )
-
-    print("\n" + "=" * 70)
-    print("ANALYSIS COMPLETE")
-    print("=" * 70)
+    for key,value in result.items():
+        print(f"{key}:{value}")
+   
