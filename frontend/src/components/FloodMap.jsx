@@ -2,9 +2,10 @@ import GISMap from "./gis/GISMap";
 import "./FloodMap.css";
 
 export default function FloodMap({
-  zones,
+  locations,
   selected,
-  analysis,
+  selectedLocation,
+  onSelectLocation,
 }) {
   return (
     <section className="panel flood-map">
@@ -12,17 +13,19 @@ export default function FloodMap({
         <h2>Geographic Flood-Risk Map</h2>
 
         <span className="eyebrow">
-          {selected?.label === "NOW"
-            ? "Real-time GIS Assessment"
-            : `Forecast: ${selected?.label || "GIS Map"}`}
+          {selectedLocation
+            ? `Selected: ${selectedLocation.location_name} • ${selected?.label || "NOW"
+            }`
+            : "Select a location on the map"}
         </span>
       </div>
 
       <div className="panel-body">
         <GISMap
-          zones={zones}
+          locations={locations}
           selected={selected}
-          analysis={analysis}
+          selectedLocation={selectedLocation}
+          onSelectLocation={onSelectLocation}
         />
       </div>
     </section>

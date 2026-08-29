@@ -21,8 +21,11 @@ export default function App() {
     rainfallHistory,
     alerts,
     riskZones,
+    locations,
     lastUpdated,
     analysis,
+    selectedLocation,
+    handleSelectLocation,
   } = useDashboardData();
 
   if (loading) {
@@ -58,9 +61,10 @@ export default function App() {
         />
 
         <FloodMap
-          zones={riskZones}
+          locations={locations}
           selected={selected}
-          analysis={analysis}
+          selectedLocation={selectedLocation}
+          onSelectLocation={handleSelectLocation}
         />
 
         <ForecastTimeline

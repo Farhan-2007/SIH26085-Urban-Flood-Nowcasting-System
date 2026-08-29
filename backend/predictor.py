@@ -2,48 +2,60 @@ import pandas as pd
 
 
 # ---------------------------------------------------------------------------
-# SAMPLE / IMAGINARY INPUT DATA   (TODO: replace with real input later)
+# SAMPLE / IMAGINARY INPUT DATA
+# TODO: Replace with real data / API data later
 # ---------------------------------------------------------------------------
 
-# One fictional street, used to test the module end-to-end today.
 SAMPLE_STREET = {
     "location_id": "RD-001",
     "location_name": "Sample Street A (imaginary)",
     "latitude": 19.0000,
     "longitude": 72.8000,
-    "age_years": 2,                    # constructed 2 years ago
-    "years_since_maintenance": 2,      # never repaired since creation
-    "population_density": 18500,       # people / sq.km
-    "avg_population_density": 12000,   # city average, for comparison
-    "elevation": 8,                    # metres (low-lying)
-    "slope": 1.2,                      # percent (very flat -> poor natural drainage)
-    "imperviousness": 0.82,            # 82% paved / built-up surface
-    "drainage_capacity": 50,           # design capacity, mm/hr, before degradation
+
+    "age_years": 2,
+    "years_since_maintenance": 2,
+
+    "population_density": 18500,
+    "avg_population_density": 12000,
+
+    "elevation": 8,
+    "slope": 1.2,
+
+    "imperviousness": 0.82,
+
+    "drainage_capacity": 50,
 }
 
-# Imaginary weather snapshot for "now". TODO: replace with live rainfall input.
+
 SAMPLE_WEATHER = {
-    "rainfall": 100,          # mm (heavy rainfall event)
-    "lightning": True,        # flag only -> used for alert severity, not risk math
-    "water_level": 0.6,       # 0-1, fraction of drain/channel already full
-    "soil_saturation": 0.55,  # 0-1, how saturated the ground already is
+    "rainfall": 100,
+    "lightning": True,
+    "water_level": 0.6,
+    "soil_saturation": 0.55,
 }
 
-FORECAST_INTERVALS = [0, 30, 60, 120, 180]  # minutes: Now, 30, 60, 120, 180
+
+# Forecast points
+FORECAST_INTERVALS = [
+    0,
+    30,
+    60,
+    120,
+    180,
+]
 
 
 # ---------------------------------------------------------------------------
 # CLASS 1 -- FactorAnalyzer
-# Computes every contributing factor's VALUE and IMPORTANCE (weight).
 # ---------------------------------------------------------------------------
+
 class FactorAnalyzer:
+
     """
-    Turns raw street + weather data into normalized (0-1) factors, each
-    with a weight (importance) reflecting how much it influences the final
-    risk score -- the weighted-average design decided at ideation.
+    Converts street and weather data into
+    normalized flood-risk factors.
     """
 
-    # Weights must sum to 1.0. Tune these as the team calibrates the model.
     WEIGHTS = {
         "rainfall_intensity": 0.25,
         "runoff_ratio": 0.20,
@@ -54,183 +66,1029 @@ class FactorAnalyzer:
         "population_density_impact": 0.05,
     }
 
-    def __init__(self, street: dict, weather: dict):
+
+    def __init__(
+        self,
+        street: dict,
+        weather: dict,
+    ):
+
         self.street = street
         self.weather = weather
 
-    def _maintenance_factor(self) -> float:
-        """Drains lose effective capacity ~5%/year without maintenance."""
-        deficit = 0.05 * self.street["years_since_maintenance"]
-        return max(1 - deficit, 0.5)  # floor at 50% capacity
 
-    def compute(self, rainfall: float, soil_saturation: float) -> dict:
-        """Returns {factor_name: {value, weight}} for one point in time."""
+    def _maintenance_factor(self) -> float:
+
+        """
+        Drainage capacity decreases when
+        maintenance has not been performed.
+        """
+
+        deficit = (
+            0.05
+            * self.street[
+                "years_since_maintenance"
+            ]
+        )
+
+        return max(
+            1 - deficit,
+            0.5,
+        )
+
+
+    def compute(
+        self,
+        rainfall: float,
+        soil_saturation: float,
+    ) -> dict:
+
         street = self.street
 
-        # Simplified Rational Method: runoff coefficient C as a weighted mix
-        # of imperviousness, slope (flatter = worse natural drainage) and
-        # existing soil saturation.
-        slope_factor = 1 - min(street["slope"] / 10, 1)
+
+        # ------------------------------------------------
+        # RUNOFF CALCULATION
+        # ------------------------------------------------
+
+        slope_factor = (
+            1
+            - min(
+                street["slope"] / 10,
+                1,
+            )
+        )
+
+
         runoff_coeff = min(
-            0.5 * street["imperviousness"] + 0.2 * slope_factor + 0.3 * soil_saturation,
+
+            (
+                0.5
+                * street["imperviousness"]
+            )
+
+            +
+
+            (
+                0.2
+                * slope_factor
+            )
+
+            +
+
+            (
+                0.3
+                * soil_saturation
+            ),
+
             1.0,
         )
-        surface_runoff = rainfall * runoff_coeff
 
-        maintenance_factor = self._maintenance_factor()
-        effective_drainage_capacity = street["drainage_capacity"] * maintenance_factor
-        drainage_capacity_used = (
-            min(surface_runoff / effective_drainage_capacity, 2.0)
-            if effective_drainage_capacity else 2.0
+
+        surface_runoff = (
+            rainfall
+            * runoff_coeff
         )
-        excess_water = max(surface_runoff - effective_drainage_capacity, 0)
 
-        # Normalize each factor to 0-1 so they can be weighted-averaged together
+
+        # ------------------------------------------------
+        # DRAINAGE CAPACITY
+        # ------------------------------------------------
+
+        maintenance_factor = (
+            self._maintenance_factor()
+        )
+
+
+        effective_drainage_capacity = (
+
+            street["drainage_capacity"]
+
+            * maintenance_factor
+
+        )
+
+
+        if effective_drainage_capacity:
+
+            drainage_capacity_used = min(
+
+                surface_runoff
+                / effective_drainage_capacity,
+
+                2.0,
+
+            )
+
+        else:
+
+            drainage_capacity_used = 2.0
+
+
+        excess_water = max(
+
+            surface_runoff
+
+            - effective_drainage_capacity,
+
+            0,
+
+        )
+
+
+        # ------------------------------------------------
+        # NORMALIZED RISK FACTORS
+        # ------------------------------------------------
+
         values = {
-            "rainfall_intensity": min(rainfall / 150, 1.0),        # 150mm treated as extreme
-            "runoff_ratio": min(surface_runoff / 150, 1.0),
-            "drainage_deficit": min(excess_water / 100, 1.0),
-            "soil_saturation": soil_saturation,
-            "imperviousness": street["imperviousness"],
-            "infrastructure_condition": min((1 - maintenance_factor) / 0.5, 1.0),
-            "population_density_impact": min(
-                street["population_density"] / street["avg_population_density"] / 2, 1.0
-            ),
+
+            "rainfall_intensity":
+
+                min(
+                    rainfall / 150,
+                    1.0,
+                ),
+
+
+            "runoff_ratio":
+
+                min(
+                    surface_runoff / 150,
+                    1.0,
+                ),
+
+
+            "drainage_deficit":
+
+                min(
+                    excess_water / 100,
+                    1.0,
+                ),
+
+
+            "soil_saturation":
+
+                soil_saturation,
+
+
+            "imperviousness":
+
+                street[
+                    "imperviousness"
+                ],
+
+
+            "infrastructure_condition":
+
+                min(
+
+                    (
+                        1
+                        - maintenance_factor
+                    )
+
+                    / 0.5,
+
+                    1.0,
+
+                ),
+
+
+            "population_density_impact":
+
+                min(
+
+                    street[
+                        "population_density"
+                    ]
+
+                    /
+
+                    street[
+                        "avg_population_density"
+                    ]
+
+                    /
+
+                    2,
+
+                    1.0,
+
+                ),
+
         }
 
-        factors = {name: {"value": val, "weight": self.WEIGHTS[name]} for name, val in values.items()}
 
-        # Raw physical numbers, kept for display / downstream use
+        factors = {
+
+            name: {
+
+                "value":
+                    value,
+
+                "weight":
+                    self.WEIGHTS[
+                        name
+                    ],
+
+            }
+
+            for name, value
+
+            in values.items()
+
+        }
+
+
+        # ------------------------------------------------
+        # RAW PHYSICAL VALUES
+        # ------------------------------------------------
+
         factors["_raw"] = {
-            "surface_runoff": round(surface_runoff, 2),
-            "drainage_capacity_used": round(drainage_capacity_used, 2),
-            "effective_drainage_capacity": round(effective_drainage_capacity, 2),
-            "excess_water": round(excess_water, 2),
+
+            "surface_runoff":
+
+                round(
+                    surface_runoff,
+                    2,
+                ),
+
+
+            "drainage_capacity_used":
+
+                round(
+                    drainage_capacity_used,
+                    2,
+                ),
+
+
+            "effective_drainage_capacity":
+
+                round(
+                    effective_drainage_capacity,
+                    2,
+                ),
+
+
+            "excess_water":
+
+                round(
+                    excess_water,
+                    2,
+                ),
+
         }
+
+
         return factors
 
 
 # ---------------------------------------------------------------------------
 # CLASS 2 -- RiskAggregator
-# Weighted average -> risk_score / risk_level, plus forecast + trend status
 # ---------------------------------------------------------------------------
+
 class RiskAggregator:
-    def __init__(self, analyzer: FactorAnalyzer):
+
+
+    def __init__(
+        self,
+        analyzer: FactorAnalyzer,
+    ):
+
         self.analyzer = analyzer
 
+
+    # ------------------------------------------------
+    # CLASSIFY RISK
+    # ------------------------------------------------
+
     @staticmethod
-    def _classify(risk_score: float) -> str:
+    def _classify(
+        risk_score: float,
+    ) -> str:
+
         if risk_score < 25:
+
             return "Low"
+
         elif risk_score < 50:
+
             return "Moderate"
+
         elif risk_score < 75:
+
             return "High"
+
         return "Critical"
 
-    @staticmethod
-    def _rainfall_at(base_rainfall: float, minutes: int) -> float:
-        """Placeholder rainfall-decay curve (no real forecast API yet).
-        TODO: replace with actual weather forecast input later.
-        Assumes the storm gradually tapers off after peaking now."""
-        decay = {0: 1.0, 30: 0.9, 60: 0.75, 120: 0.5, 180: 0.3}
-        return round(base_rainfall * decay.get(minutes, 0.3), 1)
 
-    @staticmethod
-    def _soil_saturation_at(base_saturation: float, minutes: int) -> float:
-        """Soil keeps saturating while it's still raining, then plateaus."""
-        increment = {0: 0.0, 30: 0.05, 60: 0.10, 120: 0.15, 180: 0.18}
-        return min(base_saturation + increment.get(minutes, 0.18), 1.0)
+    # ------------------------------------------------
+    # FORECAST RAINFALL
+    # ------------------------------------------------
 
-    def score_at(self, minutes: int) -> dict:
-        rainfall = self._rainfall_at(self.analyzer.weather["rainfall"], minutes)
-        soil_saturation = self._soil_saturation_at(self.analyzer.weather["soil_saturation"], minutes)
-        factors = self.analyzer.compute(rainfall, soil_saturation)
+    def _rainfall_at(
+        self,
+        base_rainfall: float,
+        minutes: int,
+    ) -> float:
+
+        """
+        Dynamic rainfall forecast.
+
+        Severe conditions can continue increasing,
+        while low rainfall conditions recede.
+        """
+
+        street = self.analyzer.street
+
+        weather = self.analyzer.weather
+
+
+        drainage_pressure = (
+
+            weather["water_level"]
+
+            +
+
+            weather["soil_saturation"]
+
+            +
+
+            street["imperviousness"]
+
+        ) / 3
+
+
+        # ---------------------------------------------
+        # SEVERE CONDITIONS
+        # ---------------------------------------------
+
+        if (
+
+            base_rainfall >= 80
+
+            or
+
+            drainage_pressure >= 0.75
+
+        ):
+
+            trend = {
+
+                0: 1.00,
+
+                30: 1.05,
+
+                60: 1.10,
+
+                120: 1.20,
+
+                180: 1.10,
+
+            }
+
+
+        # ---------------------------------------------
+        # MODERATE CONDITIONS
+        # ---------------------------------------------
+
+        elif base_rainfall >= 40:
+
+            trend = {
+
+                0: 1.00,
+
+                30: 1.02,
+
+                60: 1.05,
+
+                120: 0.95,
+
+                180: 0.80,
+
+            }
+
+
+        # ---------------------------------------------
+        # LOW CONDITIONS
+        # ---------------------------------------------
+
+        else:
+
+            trend = {
+
+                0: 1.00,
+
+                30: 0.90,
+
+                60: 0.75,
+
+                120: 0.55,
+
+                180: 0.35,
+
+            }
+
+
+        return round(
+
+            base_rainfall
+
+            * trend.get(
+                minutes,
+                0.5,
+            ),
+
+            1,
+
+        )
+
+
+    # ------------------------------------------------
+    # FORECAST SOIL SATURATION
+    # ------------------------------------------------
+
+    def _soil_saturation_at(
+        self,
+        base_saturation: float,
+        minutes: int,
+    ) -> float:
+
+        rainfall = self._rainfall_at(
+
+            self.analyzer.weather[
+                "rainfall"
+            ],
+
+            minutes,
+
+        )
+
+
+        base_rainfall = (
+
+            self.analyzer.weather[
+                "rainfall"
+            ]
+
+        )
+
+
+        rainfall_factor = min(
+
+            rainfall
+
+            /
+
+            max(
+                base_rainfall,
+                1,
+            ),
+
+            1.5,
+
+        )
+
+
+        time_factor = (
+
+            minutes
+            / 180
+
+        )
+
+
+        increase = (
+
+            0.25
+
+            * rainfall_factor
+
+            * time_factor
+
+        )
+
+
+        return min(
+
+            base_saturation
+
+            + increase,
+
+            1.0,
+
+        )
+
+
+    # ------------------------------------------------
+    # CALCULATE RISK AT A SPECIFIC TIME
+    # ------------------------------------------------
+
+    def score_at(
+        self,
+        minutes: int,
+    ) -> dict:
+
+        rainfall = self._rainfall_at(
+
+            self.analyzer.weather[
+                "rainfall"
+            ],
+
+            minutes,
+
+        )
+
+
+        soil_saturation = (
+
+            self._soil_saturation_at(
+
+                self.analyzer.weather[
+                    "soil_saturation"
+                ],
+
+                minutes,
+
+            )
+
+        )
+
+
+        factors = self.analyzer.compute(
+
+            rainfall,
+
+            soil_saturation,
+
+        )
+
+
+        # ---------------------------------------------
+        # BASE WEIGHTED RISK SCORE
+        # ---------------------------------------------
+
+        risk_score = (
+
+            sum(
+
+                factor["value"]
+
+                * factor["weight"]
+
+                for name, factor
+
+                in factors.items()
+
+                if name != "_raw"
+
+            )
+
+            * 100
+
+        )
+
+
+        # ---------------------------------------------
+        # FLOOD ACCUMULATION PRESSURE
+        # ---------------------------------------------
+
+        drainage_used = (
+
+            factors["_raw"][
+                "drainage_capacity_used"
+            ]
+
+        )
+
+
+        excess_water = (
+
+            factors["_raw"][
+                "excess_water"
+            ]
+
+        )
+
+
+        accumulation_pressure = 0
+
+
+        # Drainage overload
+
+        if drainage_used >= 1.0:
+
+            accumulation_pressure += min(
+
+                (
+                    drainage_used
+                    - 1.0
+                )
+
+                * 15,
+
+                15,
+
+            )
+
+
+        # Excess water accumulation
+
+        if excess_water >= 20:
+
+            accumulation_pressure += min(
+
+                excess_water / 10,
+
+                10,
+
+            )
+
+
+        # Longer flooding duration
+
+        if minutes >= 60:
+
+            accumulation_pressure += 3
+
+
+        if minutes >= 120:
+
+            accumulation_pressure += 5
+
+
+        if minutes >= 180:
+
+            accumulation_pressure += 5
+
+
+        # ---------------------------------------------
+        # FINAL SCORE
+        # ---------------------------------------------
+
+        risk_score += (
+
+            accumulation_pressure
+
+        )
+
 
         risk_score = round(
-            sum(f["value"] * f["weight"] for name, f in factors.items() if name != "_raw") * 100, 1
+
+            min(
+                risk_score,
+                100,
+            ),
+
+            1,
+
         )
-        risk_level = self._classify(risk_score)
+
+
+        risk_level = (
+
+            self._classify(
+                risk_score
+            )
+
+        )
+
 
         return {
-            "forecast_minutes": minutes,
-            "rainfall": rainfall,
-            "risk_score": risk_score,
-            "risk_level": risk_level,
+
+            "forecast_minutes":
+                minutes,
+
+
+            "rainfall":
+                rainfall,
+
+
+            "risk_score":
+                risk_score,
+
+
+            "risk_level":
+                risk_level,
+
+
             **factors["_raw"],
+
         }
 
-    def forecast(self, intervals=None) -> list:
-        intervals = intervals or FORECAST_INTERVALS
-        results = [self.score_at(m) for m in intervals]
 
-        for i, row in enumerate(results):
+    # ------------------------------------------------
+    # GENERATE COMPLETE FORECAST
+    # ------------------------------------------------
+
+    def forecast(
+        self,
+        intervals=None,
+    ) -> list:
+
+        intervals = (
+
+            intervals
+
+            or
+
+            FORECAST_INTERVALS
+
+        )
+
+
+        results = [
+
+            self.score_at(
+                minutes
+            )
+
+            for minutes
+
+            in intervals
+
+        ]
+
+
+        # ---------------------------------------------
+        # DETERMINE TREND
+        # ---------------------------------------------
+
+        for i, row in enumerate(
+            results
+        ):
+
+            # NOW
+
             if i == 0:
-                row["prediction_status"] = "Stable"  # "now" has no prior point to compare
+
+                row[
+                    "prediction_status"
+                ] = "Stable"
+
                 continue
-            delta = row["risk_score"] - results[i - 1]["risk_score"]
+
+
+            previous = (
+
+                results[
+                    i - 1
+                ]
+
+            )
+
+
+            delta = (
+
+                row[
+                    "risk_score"
+                ]
+
+                -
+
+                previous[
+                    "risk_score"
+                ]
+
+            )
+
+
             if delta > 3:
-                row["prediction_status"] = "Intensifying"
+
+                row[
+                    "prediction_status"
+                ] = "Intensifying"
+
+
             elif delta < -3:
-                row["prediction_status"] = "Receding"
+
+                row[
+                    "prediction_status"
+                ] = "Receding"
+
+
             else:
-                row["prediction_status"] = "Stable"
-            # NOTE: "Shifting" (risk moving to a different location) can only
-            # be detected once multiple locations are compared side by side --
-            # not meaningful for a single-street test. Comes with multi-road support.
+
+                row[
+                    "prediction_status"
+                ] = "Stable"
+
+
         return results
 
 
 # ---------------------------------------------------------------------------
 # CLASS 3 -- PredictorIO
-# Input/output handling using pandas. Orchestrates Class 1 + Class 2.
 # ---------------------------------------------------------------------------
-class PredictorIO:
-    def __init__(self, street: dict, weather: dict):
-        self.street = street
-        self.weather = weather
-        self.analyzer = FactorAnalyzer(street, weather)
-        self.aggregator = RiskAggregator(self.analyzer)
 
-    def run(self) -> pd.DataFrame:
-        """Runs the full forecast and returns a tidy pandas DataFrame,
-        using the shared field-naming convention for the team."""
-        rows = self.aggregator.forecast()
-        df = pd.DataFrame(rows)
-        df.insert(0, "location_name", self.street["location_name"])
-        df.insert(0, "location_id", self.street["location_id"])
-        df["lightning"] = self.weather["lightning"]  # metadata for alert module
+class PredictorIO:
+
+
+    def __init__(
+        self,
+        street: dict,
+        weather: dict,
+    ):
+
+        self.street = street
+
+        self.weather = weather
+
+
+        self.analyzer = (
+
+            FactorAnalyzer(
+                street,
+                weather,
+            )
+
+        )
+
+
+        self.aggregator = (
+
+            RiskAggregator(
+                self.analyzer
+            )
+
+        )
+
+
+    def run(
+        self,
+    ) -> pd.DataFrame:
+
+        """
+        Runs the complete flood prediction
+        and returns a pandas DataFrame.
+        """
+
+        rows = (
+
+            self.aggregator.forecast()
+
+        )
+
+
+        df = pd.DataFrame(
+            rows
+        )
+
+
+        df.insert(
+
+            0,
+
+            "location_name",
+
+            self.street[
+                "location_name"
+            ],
+
+        )
+
+
+        df.insert(
+
+            0,
+
+            "location_id",
+
+            self.street[
+                "location_id"
+            ],
+
+        )
+
+
+        df[
+            "lightning"
+        ] = (
+
+            self.weather[
+                "lightning"
+            ]
+
+        )
+
 
         cols = [
-            "location_id", "location_name", "forecast_minutes", "rainfall",
-            "surface_runoff", "drainage_capacity_used", "excess_water",
-            "risk_score", "risk_level", "prediction_status", "lightning",
+
+            "location_id",
+
+            "location_name",
+
+            "forecast_minutes",
+
+            "rainfall",
+
+            "surface_runoff",
+
+            "drainage_capacity_used",
+
+            "excess_water",
+
+            "risk_score",
+
+            "risk_level",
+
+            "prediction_status",
+
+            "lightning",
+
         ]
-        return df[cols]
 
-    def to_dict_records(self) -> list:
-        """Same output as a list of dicts -- e.g. for a Flask API response."""
-        return self.run().to_dict(orient="records")
+
+        return df[
+            cols
+        ]
+
+
+    def to_dict_records(
+        self,
+    ) -> list:
+
+        """
+        Returns prediction as list of dictionaries.
+        Used by Flask API.
+        """
+
+        return (
+
+            self.run()
+
+            .to_dict(
+                orient="records"
+            )
+
+        )
+
 
 # ---------------------------------------------------------------------------
-# API helper
+# API HELPER
 # ---------------------------------------------------------------------------
 
-def predict_flood_forecast(street: dict, weather: dict) -> list:
+def predict_flood_forecast(
+    street: dict,
+    weather: dict,
+) -> list:
+
     """
-    Generate the complete flood forecast for a street/location.
-    Used by the Flask API.
+    Generate complete flood forecast
+    for one location.
     """
-    predictor = PredictorIO(street, weather)
-    return predictor.to_dict_records()
+
+    predictor = PredictorIO(
+        street,
+        weather,
+    )
+
+
+    return (
+
+        predictor
+        .to_dict_records()
+
+    )
+
 
 # ---------------------------------------------------------------------------
-# DEMO -- run standalone to sanity-check today's output
+# DEMO
 # ---------------------------------------------------------------------------
+
 if __name__ == "__main__":
-    predictor = PredictorIO(SAMPLE_STREET, SAMPLE_WEATHER)
-    forecast_df = predictor.run()
 
-    pd.set_option("display.max_columns", None)
-    pd.set_option("display.width", 120)
-    print(forecast_df.to_string(index=False))
+    predictor = PredictorIO(
+
+        SAMPLE_STREET,
+
+        SAMPLE_WEATHER,
+
+    )
+
+
+    forecast_df = (
+
+        predictor.run()
+
+    )
+
+
+    pd.set_option(
+        "display.max_columns",
+        None,
+    )
+
+
+    pd.set_option(
+        "display.width",
+        140,
+    )
+
+
+    print(
+
+        forecast_df.to_string(
+            index=False
+        )
+
+    )

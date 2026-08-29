@@ -12,7 +12,9 @@ export default function AlertsPanel({ alerts }) {
     <section className="panel" aria-labelledby="alerts-heading">
       <div className="panel-header">
         <h2 id="alerts-heading">Alerts &amp; Warnings</h2>
-        <span className="eyebrow">{alerts.length} Active · Prototype Data</span>
+        <span className="eyebrow">
+          {alerts.length} Active · Live Risk Data
+        </span>
       </div>
       <div className="panel-body alerts-panel__body">
         {alerts.length === 0 && <p className="alerts-panel__empty">No active alerts for the monitored zone.</p>}
