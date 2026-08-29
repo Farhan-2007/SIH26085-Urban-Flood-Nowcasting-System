@@ -83,10 +83,24 @@ export async function getForecastTimeline() {
   return resolveMock(FORECAST_TIMELINE);
 }
 
-export async function getRainfallHistory() {
-  return resolveMock(RAINFALL_HISTORY);
-}
+export async function getRainfallHistory(
+  locationId = "L001"
+) {
+  const response = await fetch(
+    `${API_BASE_URL}/rainfall/history?location_id=${locationId}`
+  );
 
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(
+      data.error ||
+      "Failed to load rainfall history"
+    );
+  }
+
+  return data.history;
+}
 export async function getAlerts() {
   return resolveMock(ALERTS);
 }
@@ -97,4 +111,67 @@ export async function getRiskZones() {
 
 export async function getLastUpdated() {
   return resolveMock(LAST_UPDATED);
+}
+
+export async function analyseFloodConditions(data) {
+  const response = await fetch(`${API_BASE_URL}/analyse`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  });
+
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.error || "Failed to analyse flood conditions");
+  }
+
+  return result;
+}
+
+// --------------------------------------------------
+// Backend GIS Location Risk Data
+// --------------------------------------------------
+
+export async function getLocationsRisk(
+  forecastMinutes = 0
+) {
+  const response = await fetch(
+    `${API_BASE_URL}/locations/risk?forecast_minutes=${forecastMinutes}`
+  );
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(
+      data.error || "Failed to load location risks"
+    );
+  }
+
+  return data.locations;
+}
+
+// --------------------------------------------------
+// Backend Safe Routing
+// --------------------------------------------------
+
+export async function getSafeRoute(
+  startId,
+  endId
+) {
+  const response = await fetch(
+    `${API_BASE_URL}/routing?start_id=${startId}&end_id=${endId}`
+  );
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(
+      data.error || "Failed to generate safe route"
+    );
+  }
+
+  return data;
 }

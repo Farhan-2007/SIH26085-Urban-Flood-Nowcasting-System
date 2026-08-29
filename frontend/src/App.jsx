@@ -21,7 +21,11 @@ export default function App() {
     rainfallHistory,
     alerts,
     riskZones,
+    locations,
     lastUpdated,
+    analysis,
+    selectedLocation,
+    handleSelectLocation,
   } = useDashboardData();
 
   if (loading) {
@@ -39,14 +43,29 @@ export default function App() {
 
       <main className="dashboard">
         <div className="dashboard__row dashboard__row--top">
-          <RiskOverview selected={selected} />
+          <RiskOverview
+            selected={selected}
+            analysis={analysis}
+          />
         </div>
 
-        <RiskFactorsPanel selected={selected} />
+        <RiskFactorsPanel
+          selected={selected}
+          analysis={analysis}
+        />
 
-        <RainfallPanel selected={selected} history={rainfallHistory} />
+        <RainfallPanel
+          selected={selected}
+          history={rainfallHistory}
+          analysis={analysis}
+        />
 
-        <FloodMap zones={riskZones} />
+        <FloodMap
+          locations={locations}
+          selected={selected}
+          selectedLocation={selectedLocation}
+          onSelectLocation={handleSelectLocation}
+        />
 
         <ForecastTimeline
           timeline={timeline}
