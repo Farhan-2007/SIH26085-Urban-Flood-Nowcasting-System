@@ -3,12 +3,16 @@ from routing.routing_engine import build_routing_report
 from .validator import validate_flood_input
 from flood_engine import predict_flood_risk
 
-from predictor import (
-    SAMPLE_STREET,
-    SAMPLE_WEATHER,
-    predict_flood_forecast,
+from backend.predictor import (
+   DatasetLoader,
+   predict_flood_forecast,
+   predict_from_dataset
 )
 
+from backend.Analyser import(
+    RealtimeAnalyser,
+    AnalyserDatasetLoader
+)
 
 api = Blueprint("api", __name__)
 
