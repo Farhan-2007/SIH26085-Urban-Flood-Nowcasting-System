@@ -15,8 +15,10 @@ import {
 // --------------------------------------------------
 
 function buildDashboardTimeline(analyserResult) {
+
   const backendTimeline =
     analyserResult.forecast || [];
+
 
   const selectedForecast =
     backendTimeline.filter(
@@ -26,40 +28,98 @@ function buildDashboardTimeline(analyserResult) {
         )
     );
 
+
   return selectedForecast.map((step) => {
+
     let label = "NOW";
+
 
     if (step.forecast_minutes === 60) {
       label = "+1 HR";
+
     } else if (step.forecast_minutes === 120) {
       label = "+2 HR";
+
     } else if (step.forecast_minutes === 180) {
       label = "+3 HR";
     }
 
+
+    const riskScore =
+      step.forecast_minutes === 0
+        ? (
+            analyserResult.analysis
+              ?.flood_condition_index
+            ??
+            step.risk_score
+          )
+        : step.risk_score;
+
+
+    const riskLevel =
+      step.forecast_minutes === 0
+        ? (
+            analyserResult.analysis
+              ?.condition
+            ||
+            step.risk_level
+            ||
+            "LOW"
+          ).toUpperCase()
+        : (
+            step.risk_level
+            ||
+            "LOW"
+          ).toUpperCase();
+
+
     return {
-      id: `${step.forecast_minutes}min`,
+
+      // ==========================================
+      // IDENTIFICATION
+      // ==========================================
+
+      id:
+        `${step.forecast_minutes}min`,
 
       label,
+
+
+      // ==========================================
+      // TIME
+      // ==========================================
+
+      forecast_minutes:
+        step.forecast_minutes,
 
       timeOffsetHours:
         step.forecast_minutes / 60,
 
+
+      // ==========================================
+      // RISK
+      // Both camelCase and snake_case
+      // ==========================================
+
       riskScore:
-        step.forecast_minutes === 0
-          ? analyserResult.analysis
-              ?.flood_condition_index ??
-            step.risk_score
-          : step.risk_score,
+        riskScore,
 
       riskLevel:
-        step.forecast_minutes === 0
-          ? (
-              analyserResult.analysis
-                ?.condition ||
-              step.risk_level
-            ).toUpperCase()
-          : step.risk_level.toUpperCase(),
+        riskLevel,
+
+      risk_score:
+        riskScore,
+
+      risk_level:
+        riskLevel,
+
+
+      // ==========================================
+      // RAINFALL
+      // ==========================================
+
+      rainfall:
+        step.rainfall,
 
       rainfallIntensity:
         step.rainfall,
@@ -67,10 +127,26 @@ function buildDashboardTimeline(analyserResult) {
       recentRainfall:
         step.rainfall,
 
+
+      // ==========================================
+      // DRAINAGE
+      // ==========================================
+
+      drainage_capacity_used:
+        step.drainage_capacity_used,
+
       drainageCapacityUsed:
         Math.round(
-          step.drainage_capacity_used * 100
+          (step.drainage_capacity_used || 0) * 100
         ),
+
+
+      // ==========================================
+      // RUNOFF
+      // ==========================================
+
+      surface_runoff:
+        step.surface_runoff,
 
       surfaceRunoff:
         step.surface_runoff >= 70
@@ -81,6 +157,33 @@ function buildDashboardTimeline(analyserResult) {
               ? "Moderate"
               : "Low",
 
+
+      // ==========================================
+      // EXCESS WATER
+      // ==========================================
+
+      excess_water:
+        step.excess_water,
+
+      excessWater:
+        step.excess_water,
+
+
+      // ==========================================
+      // PREDICTION
+      // ==========================================
+
+      prediction_status:
+        step.prediction_status,
+
+      predictionStatus:
+        step.prediction_status,
+
+
+      // ==========================================
+      // ANALYSIS
+      // ==========================================
+
       waterLevel:
         analyserResult.analysis
           ?.water_level_smoothed ?? 0,
@@ -89,21 +192,33 @@ function buildDashboardTimeline(analyserResult) {
         Math.round(
           (
             analyserResult.analysis
-              ?.soil_saturation_smoothed ??
-            0
+              ?.soil_saturation_smoothed ?? 0
           ) * 100
         ),
 
+
+      // ==========================================
+      // FORECAST NOTE
+      // ==========================================
+
       forecastNote:
+
         step.prediction_status ===
         "Intensifying"
+
           ? "Flood risk is increasing based on current rainfall and drainage conditions."
+
           : step.prediction_status ===
-              "Receding"
+            "Receding"
+
             ? "Flood risk is receding as rainfall decreases, although localized flooding may persist."
+
             : "Current flood conditions are stable.",
+
     };
+
   });
+
 }
 
 
@@ -112,38 +227,59 @@ function buildDashboardTimeline(analyserResult) {
 // --------------------------------------------------
 
 function buildDynamicAlerts(locations) {
-  if (!locations || locations.length === 0) {
+
+  if (
+    !locations ||
+    locations.length === 0
+  ) {
+
     return [];
+
   }
 
+
   const groupedLocations = {
+
     CRITICAL: [],
+
     HIGH: [],
+
     MODERATE: [],
+
   };
 
+
   locations.forEach((location) => {
+
     const level =
-      location.risk_level?.toUpperCase();
+      location.risk_level
+        ?.toUpperCase();
+
 
     if (
       groupedLocations[level]
     ) {
+
       groupedLocations[level].push(
         location
       );
+
     }
+
   });
+
 
   const alerts = [];
 
-  // ----------------------------------------
-  // CRITICAL
-  // ----------------------------------------
+
+  // --------------------------------------------
+  // CRITICAL ALERT
+  // --------------------------------------------
 
   if (
     groupedLocations.CRITICAL.length > 0
   ) {
+
     const zones =
       groupedLocations.CRITICAL
         .map(
@@ -152,24 +288,40 @@ function buildDynamicAlerts(locations) {
         )
         .join(", ");
 
+
     alerts.push({
-      id: "critical-flood-warning",
-      severity: "CRITICAL",
-      title: "Critical Flood Warning",
+
+      id:
+        "critical-flood-warning",
+
+      severity:
+        "CRITICAL",
+
+      title:
+        "Critical Flood Warning",
+
       message:
         `Critical flood conditions detected in ${zones}. Immediate attention is recommended.`,
-      zone: `${groupedLocations.CRITICAL.length} location(s)`,
-      time: "Live",
+
+      zone:
+        `${groupedLocations.CRITICAL.length} location(s)`,
+
+      time:
+        "Live",
+
     });
+
   }
 
-  // ----------------------------------------
-  // HIGH
-  // ----------------------------------------
+
+  // --------------------------------------------
+  // HIGH ALERT
+  // --------------------------------------------
 
   if (
     groupedLocations.HIGH.length > 0
   ) {
+
     const zones =
       groupedLocations.HIGH
         .map(
@@ -178,24 +330,40 @@ function buildDynamicAlerts(locations) {
         )
         .join(", ");
 
+
     alerts.push({
-      id: "high-flood-risk",
-      severity: "HIGH",
-      title: "High Flood Risk",
+
+      id:
+        "high-flood-risk",
+
+      severity:
+        "HIGH",
+
+      title:
+        "High Flood Risk",
+
       message:
         `High flood risk detected in ${zones}. Monitor drainage and traffic conditions.`,
-      zone: `${groupedLocations.HIGH.length} location(s)`,
-      time: "Live",
+
+      zone:
+        `${groupedLocations.HIGH.length} location(s)`,
+
+      time:
+        "Live",
+
     });
+
   }
 
-  // ----------------------------------------
-  // MODERATE
-  // ----------------------------------------
+
+  // --------------------------------------------
+  // MODERATE ALERT
+  // --------------------------------------------
 
   if (
     groupedLocations.MODERATE.length > 0
   ) {
+
     const zones =
       groupedLocations.MODERATE
         .map(
@@ -204,19 +372,36 @@ function buildDynamicAlerts(locations) {
         )
         .join(", ");
 
+
     alerts.push({
-      id: "moderate-flood-risk",
-      severity: "MEDIUM",
-      title: "Flood Risk Monitoring",
+
+      id:
+        "moderate-flood-risk",
+
+      severity:
+        "MEDIUM",
+
+      title:
+        "Flood Risk Monitoring",
+
       message:
         `Moderate flood risk detected in ${zones}. Conditions should be monitored.`,
-      zone: `${groupedLocations.MODERATE.length} location(s)`,
-      time: "Live",
+
+      zone:
+        `${groupedLocations.MODERATE.length} location(s)`,
+
+      time:
+        "Live",
+
     });
+
   }
 
+
   return alerts;
+
 }
+
 
 // --------------------------------------------------
 // Dashboard Hook
@@ -224,46 +409,61 @@ function buildDynamicAlerts(locations) {
 
 export function useDashboardData() {
 
+
   const [loading, setLoading] =
     useState(true);
+
 
   const [systemInfo, setSystemInfo] =
     useState(null);
 
+
   const [timeline, setTimeline] =
     useState([]);
+
 
   const [
     rainfallHistory,
     setRainfallHistory,
-  ] = useState([]);
+  ] =
+    useState([]);
+
 
   const [alerts, setAlerts] =
     useState([]);
 
+
   const [riskZones, setRiskZones] =
     useState([]);
+
 
   const [locations, setLocations] =
     useState([]);
 
+
   const [
     lastUpdated,
     setLastUpdated,
-  ] = useState(null);
+  ] =
+    useState(null);
+
 
   const [analysis, setAnalysis] =
     useState(null);
 
+
   const [
     selectedLocation,
     setSelectedLocation,
-  ] = useState(null);
+  ] =
+    useState(null);
+
 
   const [
     selectedStep,
     setSelectedStep,
-  ] = useState(0);
+  ] =
+    useState(0);
 
 
   // ------------------------------------------------
@@ -272,6 +472,7 @@ export function useDashboardData() {
 
   useEffect(() => {
 
+
     let cancelled = false;
 
 
@@ -279,39 +480,111 @@ export function useDashboardData() {
 
       try {
 
+
         const [
+
           info,
+
           zones,
+
           updated,
+
           locationsRisk,
-        ] = await Promise.all([
 
-          getSystemInfo(),
+        ] =
+          await Promise.all([
 
-          getRiskZones(),
+            getSystemInfo(),
 
-          getLastUpdated(),
+            getRiskZones(),
 
-          getLocationsRisk(0),
+            getLastUpdated(),
 
-        ]);
+            getLocationsRisk(0),
+
+          ]);
 
 
-        if (cancelled) return;
+        if (cancelled) {
+          return;
+        }
 
 
-        setSystemInfo(info);
+        // ----------------------------------------
+        // System information
+        // ----------------------------------------
 
-        setRiskZones(zones);
+        setSystemInfo(
+          info
+        );
 
-        setLastUpdated(updated);
+
+        setRiskZones(
+          zones
+        );
+
+
+        // ----------------------------------------
+        // Fix lastUpdated
+        // Convert backend value into Date object
+        // ----------------------------------------
+
+        if (updated) {
+
+          let updatedDate;
+
+
+          if (
+            updated instanceof Date
+          ) {
+
+            updatedDate =
+              updated;
+
+          } else if (
+            typeof updated === "object"
+          ) {
+
+            const dateValue =
+              updated.last_updated
+              ||
+              updated.timestamp
+              ||
+              updated.updated_at;
+
+
+            updatedDate =
+              dateValue
+                ? new Date(dateValue)
+                : new Date();
+
+          } else {
+
+            updatedDate =
+              new Date(updated);
+
+          }
+
+
+          setLastUpdated(
+            updatedDate
+          );
+
+        }
+
+
+        // ----------------------------------------
+        // GIS locations
+        // ----------------------------------------
 
         setLocations(
           locationsRisk
         );
 
 
-        // Generate alerts from GIS risk data
+        // ----------------------------------------
+        // Dynamic alerts
+        // ----------------------------------------
 
         setAlerts(
           buildDynamicAlerts(
@@ -320,11 +593,15 @@ export function useDashboardData() {
         );
 
 
+        // ----------------------------------------
         // Select first location
+        // ----------------------------------------
 
         if (
+          locationsRisk &&
           locationsRisk.length > 0
         ) {
+
 
           const firstLocation =
             locationsRisk[0];
@@ -335,7 +612,9 @@ export function useDashboardData() {
           );
 
 
-          // Load rainfall history
+          // --------------------------------------
+          // Rainfall history
+          // --------------------------------------
 
           const rainfall =
             await getRainfallHistory(
@@ -343,7 +622,9 @@ export function useDashboardData() {
             );
 
 
-          if (cancelled) return;
+          if (cancelled) {
+            return;
+          }
 
 
           setRainfallHistory(
@@ -351,7 +632,9 @@ export function useDashboardData() {
           );
 
 
-          // Analyse selected location
+          // --------------------------------------
+          // Flood analysis
+          // --------------------------------------
 
           const analyserResult =
             await analyseFloodConditions({
@@ -362,39 +645,66 @@ export function useDashboardData() {
             });
 
 
-          if (cancelled) return;
+          if (cancelled) {
+            return;
+          }
 
+
+          // --------------------------------------
+          // Analysis
+          // --------------------------------------
 
           setAnalysis(
             analyserResult.analysis
           );
 
 
-          // Generate timeline
+          // --------------------------------------
+          // Timeline
+          // --------------------------------------
 
-          setTimeline(
+          const dashboardTimeline =
             buildDashboardTimeline(
               analyserResult
-            )
+            );
+
+
+          setTimeline(
+            dashboardTimeline
           );
+
+
+          setSelectedStep(
+            0
+          );
+
         }
 
 
-        setSelectedStep(0);
+        setLoading(
+          false
+        );
 
-        setLoading(false);
 
       } catch (error) {
+
 
         console.error(
           "Failed to load dashboard data:",
           error
         );
 
+
         if (!cancelled) {
-          setLoading(false);
+
+          setLoading(
+            false
+          );
+
         }
+
       }
+
     }
 
 
@@ -402,8 +712,12 @@ export function useDashboardData() {
 
 
     return () => {
-      cancelled = true;
+
+      cancelled =
+        true;
+
     };
+
 
   }, []);
 
@@ -414,6 +728,7 @@ export function useDashboardData() {
 
   useEffect(() => {
 
+
     let cancelled = false;
 
 
@@ -421,8 +736,13 @@ export function useDashboardData() {
 
       try {
 
-        if (!timeline.length) {
+
+        if (
+          !timeline.length
+        ) {
+
           return;
+
         }
 
 
@@ -430,18 +750,27 @@ export function useDashboardData() {
           timeline[selectedStep];
 
 
-        if (!selectedForecast) {
+        if (
+          !selectedForecast
+        ) {
+
           return;
+
         }
 
 
+        // ----------------------------------------
+        // IMPORTANT
+        // Use forecast_minutes directly
+        // ----------------------------------------
+
         const forecastMinutes =
-          Math.round(
-            selectedForecast.timeOffsetHours * 60
-          );
+          selectedForecast.forecast_minutes;
 
 
-        // Load risk data for all locations
+        // ----------------------------------------
+        // Get updated location risk
+        // ----------------------------------------
 
         const updatedLocations =
           await getLocationsRisk(
@@ -449,17 +778,23 @@ export function useDashboardData() {
           );
 
 
-        if (cancelled) return;
+        if (cancelled) {
+          return;
+        }
 
 
+        // ----------------------------------------
         // Update GIS markers
+        // ----------------------------------------
 
         setLocations(
           updatedLocations
         );
 
 
+        // ----------------------------------------
         // Update alerts
+        // ----------------------------------------
 
         setAlerts(
           buildDynamicAlerts(
@@ -467,13 +802,17 @@ export function useDashboardData() {
           )
         );
 
+
       } catch (error) {
+
 
         console.error(
           "Failed to update GIS risk data:",
           error
         );
+
       }
+
     }
 
 
@@ -481,21 +820,30 @@ export function useDashboardData() {
 
 
     return () => {
-      cancelled = true;
+
+      cancelled =
+        true;
+
     };
 
+
   }, [
+
     selectedStep,
+
     timeline,
+
   ]);
 
 
   // ------------------------------------------------
-  // Current forecast selection
+  // Currently selected forecast
   // ------------------------------------------------
 
   const selected =
-    timeline[selectedStep] || null;
+    timeline[selectedStep]
+    ||
+    null;
 
 
   // ------------------------------------------------
@@ -507,10 +855,15 @@ export function useDashboardData() {
 
       try {
 
-        setLoading(true);
+
+        setLoading(
+          true
+        );
 
 
+        // --------------------------------------
         // Load rainfall history
+        // --------------------------------------
 
         const rainfall =
           await getRainfallHistory(
@@ -518,7 +871,9 @@ export function useDashboardData() {
           );
 
 
-        // Analyse selected location
+        // --------------------------------------
+        // Analyse location
+        // --------------------------------------
 
         const analyserResult =
           await analyseFloodConditions({
@@ -529,28 +884,36 @@ export function useDashboardData() {
           });
 
 
+        // --------------------------------------
         // Update selected location
+        // --------------------------------------
 
         setSelectedLocation(
           location
         );
 
 
-        // Update rainfall graph
+        // --------------------------------------
+        // Update rainfall
+        // --------------------------------------
 
         setRainfallHistory(
           rainfall
         );
 
 
+        // --------------------------------------
         // Update analysis
+        // --------------------------------------
 
         setAnalysis(
           analyserResult.analysis
         );
 
 
+        // --------------------------------------
         // Update timeline
+        // --------------------------------------
 
         setTimeline(
           buildDashboardTimeline(
@@ -559,22 +922,33 @@ export function useDashboardData() {
         );
 
 
+        // --------------------------------------
         // Reset to NOW
+        // --------------------------------------
 
-        setSelectedStep(0);
+        setSelectedStep(
+          0
+        );
+
 
       } catch (error) {
+
 
         console.error(
           "Failed to analyse selected location:",
           error
         );
 
+
       } finally {
 
-        setLoading(false);
+
+        setLoading(
+          false
+        );
 
       }
+
     };
 
 
@@ -584,33 +958,49 @@ export function useDashboardData() {
 
   return {
 
+
     loading,
+
 
     systemInfo,
 
+
     timeline,
+
 
     selected,
 
+
     selectedStep,
+
 
     setSelectedStep,
 
+
     rainfallHistory,
+
 
     alerts,
 
+
     riskZones,
+
 
     locations,
 
+
     lastUpdated,
+
 
     analysis,
 
+
     selectedLocation,
+
 
     handleSelectLocation,
 
+
   };
+
 }

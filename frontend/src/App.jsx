@@ -79,8 +79,10 @@ export default function App() {
         <div className="dashboard__row dashboard__row--top">
 
           <RiskOverview
-            selected={selected}
+            selectedForecast={selected}
             analysis={analysis}
+            locationName={selectedLocation?.location_name}
+            lastUpdated={lastUpdated}
           />
 
         </div>
@@ -89,8 +91,9 @@ export default function App() {
         {/* RISK FACTORS */}
 
         <RiskFactorsPanel
-          selected={selected}
+          selectedForecast={selected}
           analysis={analysis}
+          location={selectedLocation}
         />
 
 
@@ -128,7 +131,7 @@ export default function App() {
         {/* FORECAST TIMELINE */}
 
         <ForecastTimeline
-          timeline={timeline}
+          forecast={timeline}
           selectedStep={selectedStep}
           onSelectStep={setSelectedStep}
         />
