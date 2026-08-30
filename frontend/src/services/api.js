@@ -1,118 +1,83 @@
 // Data access layer for the Urban Flood Nowcasting Dashboard.
 //
-// UI components access dashboard data through the functions exported
-// from this file. Mock data is still used for dashboard sections that
-// are not connected to the backend yet.
+// This talks to the real Flask backend (backend/app.py, registered at
+// url_prefix="/api"). Every other part of the frontend goes through the
+// functions exported here rather than calling fetch() directly, so the
+// API integration lives in exactly one place.
 //
-// The flood-risk prediction is now connected to the Flask backend.
+// INSPECTION NOTES (read before changing this file):
+//
+// - GET /api/forecast always returns the forecast for the backend's
+//   hardcoded SAMPLE_STREET/SAMPLE_WEATHER (backend/predictor.py). It does
+//   not accept a location parameter, so it cannot power location
+//   selection and is intentionally not used here.
+//
+// - POST /api/analyse (backend/api/routes.py) is the endpoint that
+//   actually ties a real location_id to a live analysis *and* the full
+//   0/30/60/120/180-minute forecast (via backend/Analyser.py +
+//   backend/predictor.py). This is the endpoint the dashboard is built
+//   around.
+//
+// - /api/analyse requires a weather observation in the POST body
+//   (rainfall, water_level, soil_saturation, lightning). No endpoint
+//   currently serves that reading for a given location, so it's supplied
+//   from the project's real dataset in src/data/locations.js (see that
+//   file's header for why).
+//
+// - The backend's analyser is stateful per location_id (EMA smoothing +
+//   trend detection carry over between calls on the server), so calling
+//   this repeatedly for the same location will show "Stable" trends
+//   after the first call, which is the correct, real behaviour of
+//   backend/Analyser.py — not a frontend bug.
 
-import {
-  SYSTEM_INFO,
-  FORECAST_TIMELINE,
-  RAINFALL_HISTORY,
-  ALERTS,
-  RISK_ZONES,
-  LAST_UPDATED,
-} from "../data/mockData";
+const API_BASE_URL = "http://localhost:5000/api";
 
-// Flask backend API
-const API_BASE_URL = "http://127.0.0.1:5000/api";
-
-// Simulates network latency for mock data
-const MOCK_LATENCY_MS = 150;
-
-function resolveMock(value) {
-  return new Promise((resolve) =>
-    setTimeout(() => resolve(value), MOCK_LATENCY_MS)
-  );
+class ApiError extends Error {
+  constructor(message, status) {
+    super(message);
+    this.status = status;
+  }
 }
 
-// --------------------------------------------------
-// Backend Flood Risk Prediction
-// --------------------------------------------------
-
-export async function predictFloodRisk({
-  rainfall,
-  rainfall_intensity,
-  water_level,
-  forecast_rainfall,
-}) {
-  const response = await fetch(`${API_BASE_URL}/predict`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      rainfall,
-      rainfall_intensity,
-      water_level,
-      forecast_rainfall,
-    }),
-  });
-
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(data.error || "Failed to predict flood risk");
+async function postJson(path, body) {
+  let response;
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  } catch (networkError) {
+    throw new ApiError("Unable to reach the flood-risk service.", 0);
   }
 
-  return data;
-}
-
-export async function getBackendForecast() {
-  const response = await fetch(`${API_BASE_URL}/forecast`);
-
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(data.error || "Failed to load flood forecast");
+  let payload = null;
+  try {
+    payload = await response.json();
+  } catch {
+    // non-JSON response, fall through to status check below
   }
 
-  return data;
-}
-
-// --------------------------------------------------
-// Mock Dashboard Data
-// --------------------------------------------------
-
-export async function getSystemInfo() {
-  return resolveMock(SYSTEM_INFO);
-}
-
-export async function getForecastTimeline() {
-  return resolveMock(FORECAST_TIMELINE);
-}
-
-export async function getRainfallHistory() {
-  return resolveMock(RAINFALL_HISTORY);
-}
-
-export async function getAlerts() {
-  return resolveMock(ALERTS);
-}
-
-export async function getRiskZones() {
-  return resolveMock(RISK_ZONES);
-}
-
-export async function getLastUpdated() {
-  return resolveMock(LAST_UPDATED);
-}
-
-export async function analyseFloodConditions(data) {
-  const response = await fetch(`${API_BASE_URL}/analyse`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(data),
-  });
-
-  const result = await response.json();
-
   if (!response.ok) {
-    throw new Error(result.error || "Failed to analyse flood conditions");
+    throw new ApiError(payload?.error || `Request failed (${response.status})`, response.status);
   }
 
-  return result;
+  return payload;
 }
+
+// Calls POST /api/analyse for a given location using that location's
+// real environmental snapshot as the "current observation". Returns the
+// backend's { analysis, forecast } payload unchanged.
+export async function analyseLocation(location) {
+  const body = {
+    location_id: location.locationId,
+    rainfall: location.rainfall,
+    water_level: location.waterLevel,
+    soil_saturation: location.soilSaturation,
+    lightning: false, // no live lightning sensor/data source currently available
+  };
+
+  return postJson("/analyse", body);
+}
+
+export { ApiError };

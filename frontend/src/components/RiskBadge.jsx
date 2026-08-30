@@ -10,7 +10,7 @@ export default function RiskBadge({ level, size = "md" }) {
 
   return (
     <span
-      className={`risk-badge risk-badge--${size}`}
+      className={`risk-badge risk-badge--${size} ${level === "CRITICAL" ? "risk-badge--pulse" : ""}`}
       style={{
         color: `var(${meta.colorVar})`,
         borderColor: `var(${meta.colorVar})`,

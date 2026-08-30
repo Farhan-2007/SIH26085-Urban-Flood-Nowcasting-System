@@ -15,7 +15,13 @@ function formatTimestamp(date) {
     .replace(",", "");
 }
 
-export default function Header({ systemInfo }) {
+const STATUS_META = {
+  loading: { label: "Connecting…", className: "app-header__status-dot--loading" },
+  ready: { label: "System Online", className: "app-header__status-dot--online" },
+  error: { label: "Connection Lost", className: "app-header__status-dot--error" },
+};
+
+export default function Header({ apiStatus = "loading" }) {
   const [now, setNow] = useState(new Date());
 
   useEffect(() => {
@@ -23,10 +29,12 @@ export default function Header({ systemInfo }) {
     return () => clearInterval(interval);
   }, []);
 
+  const status = STATUS_META[apiStatus] || STATUS_META.loading;
+
   return (
     <header className="app-header">
       <div className="app-header__top">
-        <span>{systemInfo?.ministry || "Ministry of Earth Sciences, Government of India"}</span>
+        <span>Ministry of Earth Sciences, Government of India</span>
       </div>
 
       <div className="app-header__main">
@@ -35,20 +43,15 @@ export default function Header({ systemInfo }) {
             <span>MoES</span>
           </div>
           <div>
-            <h1 className="app-header__title">
-              {systemInfo?.systemName || "Urban Flood Nowcasting System"}
-            </h1>
-            <p className="app-header__subtitle">
-              {systemInfo?.subtitle || "Drainage and Rainfall Coupling"} · Problem Statement{" "}
-              {systemInfo?.problemStatementId || "SIH26085"}
-            </p>
+            <h1 className="app-header__title">Urban Flood Nowcasting System</h1>
+            <p className="app-header__subtitle">Drainage and Rainfall Coupling</p>
           </div>
         </div>
 
         <div className="app-header__status">
           <div className="app-header__status-item">
-            <span className="app-header__status-dot" aria-hidden="true" />
-            <span>System Online</span>
+            <span className={`app-header__status-dot ${status.className}`} aria-hidden="true" />
+            <span>{status.label}</span>
           </div>
           <div className="app-header__status-item app-header__status-item--time">
             <span className="eyebrow" style={{ color: "var(--color-text-on-dark-muted)" }}>

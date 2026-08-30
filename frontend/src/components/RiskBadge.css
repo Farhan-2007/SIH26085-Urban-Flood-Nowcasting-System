@@ -8,6 +8,20 @@
   border-radius: var(--radius-sm);
   background: transparent;
   white-space: nowrap;
+  transition: color 0.35s ease, border-color 0.35s ease, box-shadow 0.35s ease;
+}
+
+.risk-badge--pulse {
+  animation: risk-badge-glow 1.8s ease-in-out infinite;
+}
+
+@keyframes risk-badge-glow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(163, 33, 31, 0.25);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(163, 33, 31, 0.12);
+  }
 }
 
 .risk-badge--sm {

@@ -1,10 +1,22 @@
 # SIH26085 — Urban Flood Nowcasting System (Frontend)
 
-Frontend dashboard prototype for **Urban Flood Nowcasting System — Drainage and
-Rainfall Coupling**, built for the Smart India Hackathon internal round
-(Ministry of Earth Sciences).
+Frontend dashboard for the Urban Flood Nowcasting System (Ministry of Earth
+Sciences), integrated with the real Flask backend.
 
 ## Running locally
+
+You need both the backend and frontend running.
+
+**Backend** (from the repo root, so `backend` and `routing` resolve as packages):
+
+```bash
+pip install flask flask_cors pandas
+python -m backend.app
+```
+
+This starts Flask on `http://localhost:5000`.
+
+**Frontend:**
 
 ```bash
 cd frontend
@@ -12,59 +24,110 @@ npm install
 npm run dev
 ```
 
-The dev server prints a local URL (typically `http://localhost:5173`).
+Open the printed local URL (typically `http://localhost:5173`). The header's
+status dot reflects the real connection to the backend — green when
+`/api/analyse` succeeds, red if the backend isn't reachable.
 
-To produce a production build:
+## How the integration works
 
-```bash
-npm run build
-npm run preview   # serves the built files locally for a final check
+The dashboard is built around **`POST /api/analyse`** — the only backend
+endpoint that ties a real `location_id` to both a live analysis and the
+full 0/30/60/120/180-minute forecast (`backend/Analyser.py` +
+`backend/predictor.py`).
+
+`GET /api/forecast` was intentionally **not** used: as currently written it
+always returns the forecast for the backend's hardcoded example street
+(`SAMPLE_STREET`/`SAMPLE_WEATHER` in `backend/predictor.py`) and ignores any
+location parameter, so it can't power location selection.
+
 ```
+Location selector (src/data/locations.js)
+        ↓
+POST /api/analyse  { location_id, rainfall, water_level, soil_saturation, lightning }
+        ↓
+{ analysis: {...}, forecast: [5 points] }   (src/services/api.js)
+        ↓
+useFloodData hook (src/hooks/useFloodData.js)
+        ↓
+Dashboard components
+```
+
+### Why location data is bundled in the frontend
+
+No current endpoint lists locations or returns a location's current
+rainfall/water-level/soil-saturation reading — `backend/data_loader.py`'s
+`get_location()` only returns lat/lon plus the same hardcoded
+infrastructure values for every location, ignoring `data/raw/flood_features.csv`
+entirely.
+
+`src/data/locations.js` bundles the real values from `locations.csv` and
+`flood_features.csv` as the "current observation" sent to `/api/analyse`,
+since that's the project's actual dataset — not invented numbers. If the
+team adds an endpoint that serves this instead, replace that file's export
+with a fetch call and keep the same field names; no component changes
+needed.
+
+### A note on risk-level labels
+
+`backend/flood_engine/risk_calculator.py` (used by `POST /api/predict`)
+returns `LOW/MEDIUM/HIGH/CRITICAL`, while the forecast engine used by
+`/api/analyse` (`backend/predictor.py`) returns `Low/Moderate/High/Critical`.
+`src/utils/riskLevel.js` normalizes whichever string the backend returns
+into one consistent uppercase vocabulary for display — it does not
+recompute the risk level itself.
+
+### A note on what actually updates with the forecast timeline
+
+The backend's forecast only recomputes **rainfall, surface runoff, drainage
+capacity used, and excess water** per forecast step. It does not return a
+forecasted water level or soil saturation. The Risk Factors panel reflects
+this honestly: "Forecast Conditions" (rainfall, runoff, drainage, excess
+water) update when the timeline moves; "Current Observed Conditions"
+(channel fill level, soil saturation) are shown as live-only readings that
+don't change with the timeline.
+
+## Known gap: the routing module isn't wired to real flood data
+
+`backend/api/routes.py`'s `/api/routing` endpoint calls
+`routing_engine.build_routing_report(start_id, end_id)` with no other
+arguments, so per `routing/routing_engine.py`'s `load_mock_inputs()`, it
+always falls back to `routing/mock_data.py`'s `MOCK_LOCATIONS` /
+`MOCK_RISK_DATA` — a fictional Bangalore location set (`L1`–`L10`,
+Koramangala, Silk Board, etc.) with no relationship to the real flood
+dataset's locations (`L001`–`L010`, Mumbai).
+
+The frontend does not currently display road-impact/routing information,
+because doing so today would either show unrelated Bangalore road names
+next to real Mumbai flood data, or fail outright for every real location
+ID. Once the backend passes real `locations`/`roads`/`risk_data` into
+`build_routing_report` (or the location ID schemes are unified), a "Road
+Impact" section can be added the same way the rest of this dashboard
+consumes `/api/analyse` — through `src/services/api.js`, without touching
+`routing/*`.
 
 ## Project structure
 
 ```
 src/
 ├── components/     UI components (one file + one CSS file per component)
-├── data/           mockData.js — all mock/demo data lives here
-├── services/       api.js — data-access layer; swap in real API calls here
-├── hooks/          useDashboardData.js — loads data via services/api.js
-├── utils/          riskLevel.js — score → risk level conversion
-├── App.jsx         page composition / layout
+├── data/           locations.js — real project location + snapshot data
+├── services/       api.js — the only file that calls fetch()
+├── hooks/          useFloodData.js — location state, fetch, forecast step
+├── utils/          riskLevel.js, formatValue.js, generateAlerts.js, forecastLabels.js
+├── App.jsx         page composition, loading/error states
 └── main.jsx        entry point
 ```
 
-## Replacing mock data with the real backend
+## Testing checklist (verified against the real backend)
 
-Every dashboard component reads data through `src/services/api.js`, never
-directly from `src/data/mockData.js`. When the backend API is ready:
-
-1. Update the function bodies in `src/services/api.js` to call the real
-   endpoints (e.g. `fetch("/api/risk/current")`) instead of resolving the
-   mock objects.
-2. Keep the returned shape the same as what's currently in
-   `src/data/mockData.js` — components are written against that shape.
-3. No component code should need to change.
-
-## Risk level thresholds
-
-`src/utils/riskLevel.js` converts a 0–100 risk score into
-LOW / MODERATE / HIGH / CRITICAL. Thresholds are defined once in
-`RISK_THRESHOLDS` and used everywhere a risk level is displayed (gauge,
-badges, map legend, forecast timeline) — adjust them there if the
-backend team's model uses different bands.
-
-## Map component
-
-`src/components/FloodMap.jsx` currently renders a schematic placeholder
-with mock risk-zone markers (`src/data/mockData.js` → `RISK_ZONES`). It's
-isolated specifically so it can be swapped for a real GIS/mapping
-implementation (e.g. Leaflet or Mapbox) without touching how the rest of
-the dashboard supplies zone data.
-
-## Notes
-
-- All data on screen is mock/prototype data, clearly labelled as such in
-  the UI (see the "Prototype Data (Mock)" tag in the system info bar).
-- No backend or GIS integration is wired up yet — this is a frontend-only
-  prototype for the internal-round demo.
+- Dashboard loads and connects to `/api/analyse` — verified via live browser test
+- Switching locations via the dropdown or map updates every panel
+- Selecting a high-rainfall location (e.g. Sample Road 10) produces a real
+  HIGH risk score, drainage-exceeded state, and dynamically generated alerts
+- Moving the forecast timeline updates the gauge, factors, rainfall chart,
+  and map consistently (map risk level now follows the selected forecast
+  step, not always "now")
+- Backend unreachable → error state with retry, no stale/fake data shown
+- Invalid location handling verified against the backend's real 404 response
+- No console errors during a full location-switch + timeline-scrub session
+- Responsive down to 390px mobile width

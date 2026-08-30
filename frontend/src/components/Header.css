@@ -91,8 +91,28 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
+  transition: background 0.3s ease, box-shadow 0.3s ease;
+}
+
+.app-header__status-dot--online {
   background: var(--color-risk-low);
   box-shadow: 0 0 0 3px rgba(31, 122, 77, 0.25);
+}
+
+.app-header__status-dot--loading {
+  background: var(--color-blue-500);
+  box-shadow: 0 0 0 3px rgba(43, 116, 168, 0.25);
+  animation: header-status-pulse 1.2s ease-in-out infinite;
+}
+
+.app-header__status-dot--error {
+  background: var(--color-risk-critical);
+  box-shadow: 0 0 0 3px rgba(163, 33, 31, 0.25);
+}
+
+@keyframes header-status-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
 }
 
 .app-header__clock {
