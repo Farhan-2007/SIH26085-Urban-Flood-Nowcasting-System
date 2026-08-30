@@ -12,6 +12,10 @@
   overflow: visible;
 }
 
+.risk-gauge__needle-group {
+  transition: transform 0.65s cubic-bezier(0.34, 1.2, 0.4, 1);
+}
+
 .risk-gauge__readout {
   display: flex;
   align-items: baseline;
@@ -23,10 +27,24 @@
   font-size: 34px;
   font-weight: 600;
   line-height: 1;
+  transition: color 0.4s ease;
 }
 
 .risk-gauge__scale {
   font-size: 13px;
   color: var(--color-text-muted);
   font-family: var(--font-mono);
+}
+
+.risk-gauge--critical .risk-gauge__score {
+  animation: risk-gauge-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes risk-gauge-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
 }

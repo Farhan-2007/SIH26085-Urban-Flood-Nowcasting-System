@@ -1,27 +1,32 @@
 // Data access layer for the Urban Flood Nowcasting Dashboard.
 //
 // UI components access dashboard data through the functions exported
-// from this file. Mock data is still used for dashboard sections that
-// are not connected to the backend yet.
+// from this file.
 //
-// The flood-risk prediction is now connected to the Flask backend.
+// Flood-risk prediction, GIS risk data and safe routing
+// are connected to the Flask backend.
 
 import {
   SYSTEM_INFO,
   FORECAST_TIMELINE,
-  RAINFALL_HISTORY,
   ALERTS,
   RISK_ZONES,
   LAST_UPDATED,
 } from "../data/mockData";
 
 
-// Flask backend API
+// ============================================================
+// FLASK BACKEND API
+// ============================================================
+
 const API_BASE_URL =
   "http://127.0.0.1:5000/api";
 
 
-// Simulates network latency for mock data
+// ============================================================
+// MOCK DATA LATENCY
+// ============================================================
+
 const MOCK_LATENCY_MS = 150;
 
 
@@ -40,19 +45,23 @@ function resolveMock(value) {
 }
 
 
-// --------------------------------------------------
-// Backend Flood Risk Prediction
-// --------------------------------------------------
+// ============================================================
+// BACKEND FLOOD RISK PREDICTION
+// ============================================================
 
 export async function predictFloodRisk({
+
   rainfall,
   rainfall_intensity,
   water_level,
   forecast_rainfall,
+
 }) {
 
   const response = await fetch(
+
     `${API_BASE_URL}/predict`,
+
     {
 
       method: "POST",
@@ -67,16 +76,14 @@ export async function predictFloodRisk({
       body: JSON.stringify({
 
         rainfall,
-
         rainfall_intensity,
-
         water_level,
-
         forecast_rainfall,
 
       }),
 
     }
+
   );
 
 
@@ -101,9 +108,9 @@ export async function predictFloodRisk({
 }
 
 
-// --------------------------------------------------
-// Backend Forecast
-// --------------------------------------------------
+// ============================================================
+// BACKEND FORECAST
+// ============================================================
 
 export async function getBackendForecast() {
 
@@ -134,9 +141,9 @@ export async function getBackendForecast() {
 }
 
 
-// --------------------------------------------------
-// Mock Dashboard Data
-// --------------------------------------------------
+// ============================================================
+// SYSTEM INFORMATION
+// ============================================================
 
 export async function getSystemInfo() {
 
@@ -147,6 +154,10 @@ export async function getSystemInfo() {
 }
 
 
+// ============================================================
+// FORECAST TIMELINE
+// ============================================================
+
 export async function getForecastTimeline() {
 
   return resolveMock(
@@ -155,6 +166,10 @@ export async function getForecastTimeline() {
 
 }
 
+
+// ============================================================
+// RAINFALL HISTORY
+// ============================================================
 
 export async function getRainfallHistory(
   locationId = "L001"
@@ -189,6 +204,10 @@ export async function getRainfallHistory(
 }
 
 
+// ============================================================
+// ALERTS
+// ============================================================
+
 export async function getAlerts() {
 
   return resolveMock(
@@ -197,6 +216,10 @@ export async function getAlerts() {
 
 }
 
+
+// ============================================================
+// RISK ZONES
+// ============================================================
 
 export async function getRiskZones() {
 
@@ -207,6 +230,10 @@ export async function getRiskZones() {
 }
 
 
+// ============================================================
+// LAST UPDATED TIME
+// ============================================================
+
 export async function getLastUpdated() {
 
   return resolveMock(
@@ -216,9 +243,9 @@ export async function getLastUpdated() {
 }
 
 
-// --------------------------------------------------
-// Backend Predictor-Analyser
-// --------------------------------------------------
+// ============================================================
+// BACKEND PREDICTOR–ANALYSER
+// ============================================================
 
 export async function analyseFloodConditions(
   data
@@ -269,9 +296,12 @@ export async function analyseFloodConditions(
 }
 
 
-// --------------------------------------------------
-// Backend GIS Location Risk Data
-// --------------------------------------------------
+// ============================================================
+// GIS LOCATION RISK DATA
+//
+// Supports:
+// 0, 30, 60, 120 and 180 minute forecasts
+// ============================================================
 
 export async function getLocationsRisk(
   forecastMinutes = 0
@@ -306,26 +336,48 @@ export async function getLocationsRisk(
 }
 
 
-// --------------------------------------------------
-// Backend Safe Routing
-// --------------------------------------------------
+// ============================================================
+// SAFE ROUTING
+//
+// Dynamically changes according to:
+//
+// - Start location
+// - Destination
+// - Forecast timeline
+// ============================================================
 
 export async function getSafeRoute(
+
   startId,
   endId,
   forecastMinutes = 0
-) {
-  const response = await fetch(
-    `${API_BASE_URL}/routing?start_id=${startId}&end_id=${endId}&forecast_minutes=${forecastMinutes}`
-  );
 
-  const data = await response.json();
+) {
+
+  const response =
+    await fetch(
+
+      `${API_BASE_URL}/routing?start_id=${startId}&end_id=${endId}&forecast_minutes=${forecastMinutes}`
+
+    );
+
+
+  const data =
+    await response.json();
+
 
   if (!response.ok) {
+
     throw new Error(
-      data.error || "Failed to generate safe route"
+
+      data.error ||
+      "Failed to generate safe route"
+
     );
+
   }
 
+
   return data;
+
 }

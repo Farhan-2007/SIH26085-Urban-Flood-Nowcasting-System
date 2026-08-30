@@ -12,6 +12,7 @@ import "./RainfallPanel.css";
 
 
 function forecastLabel(intensity) {
+
   if (intensity >= 75) {
     return "Heavy rainfall expected";
   }
@@ -25,6 +26,7 @@ function forecastLabel(intensity) {
   }
 
   return "Rainfall expected to remain light";
+
 }
 
 
@@ -33,6 +35,7 @@ function CustomTooltip({
   payload,
   label,
 }) {
+
   if (
     !active ||
     !payload ||
@@ -41,17 +44,24 @@ function CustomTooltip({
     return null;
   }
 
+
   return (
+
     <div className="rainfall-tooltip">
+
       <span className="rainfall-tooltip__time mono">
         {label}
       </span>
 
+
       <span className="rainfall-tooltip__value mono">
         {payload[0].value} mm/hr
       </span>
+
     </div>
+
   );
+
 }
 
 
@@ -87,10 +97,6 @@ export default function RainfallPanel({
    * Calculate recent 3-hour rainfall
    * from the last three historical
    * observations before NOW.
-   *
-   * This is a simplified prototype
-   * representation of accumulated
-   * recent rainfall.
    */
   const recentRainfall =
     history && history.length >= 4
@@ -105,6 +111,7 @@ export default function RainfallPanel({
 
 
   return (
+
     <section
       className="panel"
       aria-labelledby="rainfall-heading"
@@ -116,10 +123,13 @@ export default function RainfallPanel({
           Rainfall Conditions
         </h2>
 
+
         {isNow && analysis && (
+
           <span className="eyebrow">
             Real-time Analyser
           </span>
+
         )}
 
       </div>
@@ -127,9 +137,11 @@ export default function RainfallPanel({
 
       <div className="panel-body rainfall-panel__body">
 
+
         {/* Rainfall readouts */}
 
         <div className="rainfall-panel__readouts">
+
 
           {/* Current rainfall */}
 
@@ -139,11 +151,13 @@ export default function RainfallPanel({
               Current Rainfall
             </span>
 
+
             <div>
 
               <span className="mono rainfall-readout__value">
-                {rainfallIntensity}
+                {rainfallIntensity ?? "N/A"}
               </span>
+
 
               <span className="rainfall-readout__unit">
                 {" "}mm/hr
@@ -162,11 +176,15 @@ export default function RainfallPanel({
               Recent (3 hr)
             </span>
 
+
             <div>
 
               <span className="mono rainfall-readout__value">
-                {Math.round(recentRainfall)}
+                {recentRainfall != null
+                  ? Math.round(recentRainfall)
+                  : "N/A"}
               </span>
+
 
               <span className="rainfall-readout__unit">
                 {" "}mm
@@ -185,10 +203,13 @@ export default function RainfallPanel({
               Forecast
             </span>
 
+
             <p className="rainfall-readout__forecast-text">
-              {forecastLabel(
-                rainfallIntensity
-              )}
+
+              {rainfallIntensity != null
+                ? forecastLabel(rainfallIntensity)
+                : "Forecast unavailable"}
+
             </p>
 
           </div>
@@ -213,7 +234,7 @@ export default function RainfallPanel({
             >
 
               <LineChart
-                data={history}
+                data={history || []}
                 margin={{
                   top: 8,
                   right: 20,
@@ -234,12 +255,10 @@ export default function RainfallPanel({
                   tick={{
                     fontSize: 11,
                     fill: "var(--color-text-muted)",
-                    fontFamily:
-                      "var(--font-mono)",
+                    fontFamily: "var(--font-mono)",
                   }}
                   axisLine={{
-                    stroke:
-                      "var(--color-border-strong)",
+                    stroke: "var(--color-border-strong)",
                   }}
                   tickLine={false}
                 />
@@ -248,10 +267,8 @@ export default function RainfallPanel({
                 <YAxis
                   tick={{
                     fontSize: 11,
-                    fill:
-                      "var(--color-text-muted)",
-                    fontFamily:
-                      "var(--font-mono)",
+                    fill: "var(--color-text-muted)",
+                    fontFamily: "var(--font-mono)",
                   }}
                   axisLine={false}
                   tickLine={false}
@@ -273,8 +290,7 @@ export default function RainfallPanel({
                   strokeWidth={2}
                   dot={{
                     r: 2.5,
-                    fill:
-                      "var(--color-blue-600)",
+                    fill: "var(--color-blue-600)",
                   }}
                   activeDot={{
                     r: 4,
@@ -292,5 +308,7 @@ export default function RainfallPanel({
       </div>
 
     </section>
+
   );
+
 }

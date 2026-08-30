@@ -9,18 +9,17 @@ import FloodMap from "./components/FloodMap";
 import ForecastTimeline from "./components/ForecastTimeline";
 import AlertsPanel from "./components/AlertsPanel";
 import Footer from "./components/Footer";
-import { useDashboardData } from "./hooks/useDashboardData";
 import RoutePanel from "./components/RoutePanel";
+
+import { useDashboardData } from "./hooks/useDashboardData";
 
 import "./App.css";
 
 
 export default function App() {
 
-  const [
-    routeData,
-    setRouteData,
-  ] = useState(null);
+  const [routeData, setRouteData] =
+    useState(null);
 
 
   const {
@@ -32,31 +31,39 @@ export default function App() {
     setSelectedStep,
     rainfallHistory,
     alerts,
-    riskZones,
-    locations,
     lastUpdated,
     analysis,
+    locations,
     selectedLocation,
     handleSelectLocation,
   } = useDashboardData();
 
 
   if (loading) {
+
     return (
+
       <div className="app-loading">
+
         <span className="mono">
           Loading nowcasting data…
         </span>
+
       </div>
+
     );
+
   }
 
 
   return (
+
     <>
+
       <Header
         systemInfo={systemInfo}
       />
+
 
       <SystemInfoBar
         systemInfo={systemInfo}
@@ -65,6 +72,9 @@ export default function App() {
 
 
       <main className="dashboard">
+
+
+        {/* RISK OVERVIEW */}
 
         <div className="dashboard__row dashboard__row--top">
 
@@ -76,11 +86,15 @@ export default function App() {
         </div>
 
 
+        {/* RISK FACTORS */}
+
         <RiskFactorsPanel
           selected={selected}
           analysis={analysis}
         />
 
+
+        {/* RAINFALL */}
 
         <RainfallPanel
           selected={selected}
@@ -90,6 +104,7 @@ export default function App() {
 
 
         {/* GIS MAP */}
+
         <FloodMap
           locations={locations}
           selected={selected}
@@ -100,6 +115,7 @@ export default function App() {
 
 
         {/* SAFE ROUTING */}
+
         <RoutePanel
           locations={locations}
           selectedLocation={selectedLocation}
@@ -109,6 +125,8 @@ export default function App() {
         />
 
 
+        {/* FORECAST TIMELINE */}
+
         <ForecastTimeline
           timeline={timeline}
           selectedStep={selectedStep}
@@ -116,9 +134,12 @@ export default function App() {
         />
 
 
+        {/* ALERTS */}
+
         <AlertsPanel
           alerts={alerts}
         />
+
 
       </main>
 
@@ -128,5 +149,7 @@ export default function App() {
       />
 
     </>
+
   );
+
 }
