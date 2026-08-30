@@ -146,7 +146,6 @@ def analyse():
 
         predictor_loader = DatasetLoader()
 
-        # Full street data required by Predictor
         street_data = predictor_loader.get_street(
             location_id
         )
@@ -313,6 +312,21 @@ def analyse():
                     street_data[
                         "longitude"
                     ],
+
+                "elevation":
+                    street_data.get(
+                        "elevation"
+                    ),
+
+                "slope":
+                    street_data.get(
+                        "slope"
+                    ),
+
+                "imperviousness":
+                    street_data.get(
+                        "imperviousness"
+                    ),
             },
 
             "analysis":
@@ -352,10 +366,10 @@ def routing():
     )
 
     forecast_minutes = request.args.get(
-    "forecast_minutes",
-    default=0,
-    type=int
-)
+        "forecast_minutes",
+        default=0,
+        type=int
+    )
 
     if not start_id or not end_id:
 
@@ -365,14 +379,6 @@ def routing():
         }), 400
 
     try:
-
-        report = (
-            build_routing_report(
-                start_id=start_id,
-                end_id=end_id,
-                forecast_minutes=forecast_minutes
-            )
-        )
 
         valid_intervals = [
             0,
@@ -393,6 +399,14 @@ def routing():
                     )
 
             }), 400
+
+        report = (
+            build_routing_report(
+                start_id=start_id,
+                end_id=end_id,
+                forecast_minutes=forecast_minutes
+            )
+        )
 
         return jsonify(
             report
@@ -526,6 +540,29 @@ def get_locations_risk():
                         location[
                             "longitude"
                         ],
+
+                    # ------------------------------------------
+                    # STATIC SITE CHARACTERISTICS
+                    # ------------------------------------------
+
+                    "elevation":
+                        location.get(
+                            "elevation"
+                        ),
+
+                    "slope":
+                        location.get(
+                            "slope"
+                        ),
+
+                    "imperviousness":
+                        location.get(
+                            "imperviousness"
+                        ),
+
+                    # ------------------------------------------
+                    # FLOOD RISK DATA
+                    # ------------------------------------------
 
                     "risk_score":
                         selected_prediction[

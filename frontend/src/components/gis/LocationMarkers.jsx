@@ -43,10 +43,6 @@ export default function LocationMarkers({
   onSelectLocation,
 }) {
 
-  console.log(
-    "GIS Locations:",
-    locations
-  );
 
 
   // Do not render markers if

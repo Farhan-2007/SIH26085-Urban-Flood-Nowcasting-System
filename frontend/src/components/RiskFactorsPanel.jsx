@@ -42,6 +42,10 @@ const DETAILS = {
 };
 
 export default function RiskFactorsPanel({ selectedForecast, analysis, location }) {
+  console.log("Elevation:", location?.elevation);
+  console.log("Slope:", location?.slope);
+  console.log("Imperviousness:", location?.imperviousness);
+
   const [expanded, setExpanded] = useState(null);
   if (!selectedForecast) {
     return (
