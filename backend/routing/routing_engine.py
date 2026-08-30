@@ -15,7 +15,7 @@ from .affected_roads import (
 )
 from .safer_route import find_safer_route
 
-from .mock_data import MOCK_ROADS
+from .real_road_data import build_real_roads
 
 from backend.predictor import (
     predict_from_dataset,
@@ -137,7 +137,7 @@ def load_routing_inputs(forecast_minutes=0):
 
 
     # Existing road topology
-    roads = MOCK_ROADS
+    roads = build_real_roads(real_locations,max_distance_km=2.0)
 
 
     # Existing routing risk data
