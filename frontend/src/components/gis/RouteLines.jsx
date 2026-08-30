@@ -67,11 +67,11 @@ export default function RouteLines({
         )
         .map((road) => {
 
-          const from =
-            locationMap[road.from_id];
+          const fromId = road.from_id ?? road.from;
+          const toId = road.to_id ?? road.to;
 
-          const to =
-            locationMap[road.to_id];
+          const from = locationMap[fromId];
+          const to = locationMap[toId];
 
           if (!from || !to) {
             return null;
@@ -134,11 +134,11 @@ export default function RouteLines({
 
       {safeRouteRoads.map((road) => {
 
-        const from =
-          locationMap[road.from];
+        const fromId = road.from_id ?? road.from;
+        const toId = road.to_id ?? road.to;
 
-        const to =
-          locationMap[road.to];
+        const from = locationMap[fromId];
+        const to = locationMap[toId];
 
         if (!from || !to) {
           return null;

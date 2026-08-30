@@ -44,7 +44,6 @@ export default function LocationMarkers({
 }) {
 
 
-
   // Do not render markers if
   // location data is unavailable.
   if (
