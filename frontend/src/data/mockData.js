@@ -81,15 +81,14 @@ export const FORECAST_TIMELINE = [
 
 // Rainfall time series for the trend chart (last 6 hours, mm/hr).
 export const RAINFALL_HISTORY = [
-  { time: "06:00", intensity: 12 },
-  { time: "07:00", intensity: 18 },
-  { time: "08:00", intensity: 34 },
-  { time: "09:00", intensity: 41 },
-  { time: "10:00", intensity: 58 },
-  { time: "11:00", intensity: 65 },
-  { time: "12:00", intensity: 72 },
+  { time: "-6h", intensity: 80 },
+  { time: "-5h", intensity: 110 },
+  { time: "-4h", intensity: 160 },
+  { time: "-3h", intensity: 190 },
+  { time: "-2h", intensity: 175 },
+  { time: "-1h", intensity: 145 },
+  { time: "NOW", intensity: 120 },
 ];
-
 export const ALERTS = [
   {
     id: "AL-1042",

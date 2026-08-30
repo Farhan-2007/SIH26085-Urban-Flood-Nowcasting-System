@@ -1,5 +1,7 @@
+import { useState } from "react";
+
 import Header from "./components/Header";
-import LocationSelector from "./components/LocationSelector";
+import SystemInfoBar from "./components/SystemInfoBar";
 import RiskOverview from "./components/RiskOverview";
 import RiskFactorsPanel from "./components/RiskFactorsPanel";
 import RainfallPanel from "./components/RainfallPanel";
@@ -7,105 +9,147 @@ import FloodMap from "./components/FloodMap";
 import ForecastTimeline from "./components/ForecastTimeline";
 import AlertsPanel from "./components/AlertsPanel";
 import Footer from "./components/Footer";
-import { useFloodData } from "./hooks/useFloodData";
-import { normalizeRiskLevel, scoreToRiskLevel } from "./utils/riskLevel";
-import { forecastMinutesLabel } from "./utils/forecastLabels";
-import { generateAlerts } from "./utils/generateAlerts";
+import RoutePanel from "./components/RoutePanel";
+
+import { useDashboardData } from "./hooks/useDashboardData";
+
 import "./App.css";
 
+
 export default function App() {
+
+  const [routeData, setRouteData] =
+    useState(null);
+
+
   const {
-    locations,
-    locationId,
-    setLocationId,
-    selectedLocation,
-    status,
-    errorMessage,
-    analysis,
-    forecast,
+    loading,
+    systemInfo,
+    timeline,
+    selected,
     selectedStep,
     setSelectedStep,
-    selectedForecast,
+    rainfallHistory,
+    alerts,
     lastUpdated,
-    retry,
-  } = useFloodData();
+    analysis,
+    locations,
+    selectedLocation,
+    handleSelectLocation,
+  } = useDashboardData();
 
-  const currentRiskLevel = selectedForecast
-    ? normalizeRiskLevel(selectedForecast.risk_level) || scoreToRiskLevel(selectedForecast.risk_score)
-    : null;
 
-  const alerts =
-    status === "ready"
-      ? generateAlerts({ analysis, forecast, locationName: selectedLocation?.name })
-      : [];
+  if (loading) {
+
+    return (
+
+      <div className="app-loading">
+
+        <span className="mono">
+          Loading nowcasting data…
+        </span>
+
+      </div>
+
+    );
+
+  }
+
 
   return (
+
     <>
-      <Header apiStatus={status} />
-      <LocationSelector
-        locations={locations}
-        locationId={locationId}
-        onChange={setLocationId}
-        selectedLocation={selectedLocation}
+
+      <Header
+        systemInfo={systemInfo}
       />
 
+
+      <SystemInfoBar
+        systemInfo={systemInfo}
+        lastUpdated={lastUpdated}
+      />
+
+
       <main className="dashboard">
-        {status === "loading" && (
-          <div className="dashboard__state">
-            <span className="mono">Loading flood-risk data for {selectedLocation?.name}…</span>
-          </div>
-        )}
 
-        {status === "error" && (
-          <div className="dashboard__state dashboard__state--error">
-            <p>{errorMessage || "Unable to retrieve current flood-risk data."}</p>
-            <p className="dashboard__state-hint">
-              Make sure the Flask backend is running locally (python -m backend.app) and reachable at
-              http://localhost:5000.
-            </p>
-            <button type="button" className="dashboard__retry" onClick={retry}>
-              Retry
-            </button>
-          </div>
-        )}
 
-        {status === "ready" && (
-          <>
-            <RiskOverview
-              selectedForecast={selectedForecast}
-              analysis={analysis}
-              locationName={selectedLocation?.name}
-              lastUpdated={lastUpdated}
-            />
+        {/* RISK OVERVIEW */}
 
-            <RiskFactorsPanel
-              selectedForecast={selectedForecast}
-              analysis={analysis}
-              location={selectedLocation}
-            />
+        <div className="dashboard__row dashboard__row--top">
 
-            <RainfallPanel forecast={forecast} selectedForecast={selectedForecast} />
+          <RiskOverview
+            selected={selected}
+            analysis={analysis}
+          />
 
-            <FloodMap
-              locations={locations}
-              locationId={locationId}
-              onSelectLocation={setLocationId}
-              currentRiskLevel={currentRiskLevel}
-              forecastLabel={selectedForecast ? forecastMinutesLabel(selectedForecast.forecast_minutes) : null}
-            />
+        </div>
 
-            <ForecastTimeline
-              forecast={forecast}
-              selectedStep={selectedStep}
-              onSelectStep={setSelectedStep}
-            />
 
-            <AlertsPanel alerts={alerts} />
-          </>
-        )}
+        {/* RISK FACTORS */}
+
+        <RiskFactorsPanel
+          selected={selected}
+          analysis={analysis}
+        />
+
+
+        {/* RAINFALL */}
+
+        <RainfallPanel
+          selected={selected}
+          history={rainfallHistory}
+          analysis={analysis}
+        />
+
+
+        {/* GIS MAP */}
+
+        <FloodMap
+          locations={locations}
+          selected={selected}
+          selectedLocation={selectedLocation}
+          onSelectLocation={handleSelectLocation}
+          routeData={routeData}
+        />
+
+
+        {/* SAFE ROUTING */}
+
+        <RoutePanel
+          locations={locations}
+          selectedLocation={selectedLocation}
+          selected={selected}
+          routeData={routeData}
+          onRouteDataChange={setRouteData}
+        />
+
+
+        {/* FORECAST TIMELINE */}
+
+        <ForecastTimeline
+          timeline={timeline}
+          selectedStep={selectedStep}
+          onSelectStep={setSelectedStep}
+        />
+
+
+        {/* ALERTS */}
+
+        <AlertsPanel
+          alerts={alerts}
+        />
+
+
       </main>
 
-      <Footer />
+
+      <Footer
+        systemInfo={systemInfo}
+      />
+
     </>
+
   );
+
 }

@@ -1,0 +1,224 @@
+.route-panel .panel-body {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.route-controls {
+  display: grid;
+  grid-template-columns:
+    1fr
+    1fr
+    auto;
+  gap: 14px;
+  align-items: end;
+}
+
+.route-control {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.route-control label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.route-control select {
+  height: 38px;
+  padding: 0 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  font-family: inherit;
+}
+
+.route-button {
+  height: 38px;
+  padding: 0 18px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--color-blue-600);
+  color: white;
+  font-weight: 600;
+}
+
+.route-button:hover {
+  background: var(--color-blue-500);
+}
+
+.route-button:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.route-result {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-alt);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.route-summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.route-summary div {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.route-summary span,
+.route-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
+  font-weight: 600;
+}
+
+.route-summary strong {
+  font-size: 14px;
+}
+
+.route-distance {
+  text-align: right;
+}
+
+.route-roads,
+.route-avoided {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.route-road-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.route-road {
+  padding: 4px 8px;
+  background: var(--color-info-bg);
+  color: var(--color-info);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  border-radius: var(--radius-sm);
+}
+
+.route-road--avoid {
+  background: var(--color-risk-critical-bg);
+  color: var(--color-risk-critical);
+}
+
+.affected-roads {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.affected-roads h3 {
+  font-size: 12px;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+  letter-spacing: 0.05em;
+}
+
+.affected-road-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.affected-road {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-border);
+}
+
+.affected-road > div:first-child {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.affected-road > div:first-child span {
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
+.affected-road-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 11px;
+}
+
+.risk-tag {
+  padding: 3px 7px;
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: var(--radius-sm);
+}
+
+.risk-tag--critical {
+  background: var(--color-risk-critical-bg);
+  color: var(--color-risk-critical);
+}
+
+.risk-tag--high {
+  background: var(--color-risk-high-bg);
+  color: var(--color-risk-high);
+}
+
+.risk-tag--moderate {
+  background: var(--color-risk-moderate-bg);
+  color: var(--color-risk-moderate);
+}
+
+.route-error {
+  padding: 10px 12px;
+  background: var(--color-risk-critical-bg);
+  color: var(--color-risk-critical);
+  border-left: 3px solid var(--color-risk-critical);
+}
+
+.route-empty {
+  padding: 14px;
+  color: var(--color-text-muted);
+  background: var(--color-surface-alt);
+}
+
+@media (max-width: 720px) {
+  .route-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .route-summary {
+    flex-direction: column;
+  }
+
+  .route-distance {
+    text-align: left;
+  }
+
+  .affected-road {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
+}

@@ -1,115 +1,314 @@
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceDot } from "recharts";
-import { forecastMinutesLabel } from "../utils/forecastLabels";
-import { isValidNumber } from "../utils/formatValue";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
+
 import "./RainfallPanel.css";
 
-function CustomTooltip({ active, payload }) {
-  if (!active || !payload || !payload.length) return null;
-  const point = payload[0].payload;
-  return (
-    <div className="rainfall-tooltip">
-      <span className="rainfall-tooltip__time mono">{forecastMinutesLabel(point.forecast_minutes)}</span>
-      <span className="rainfall-tooltip__value mono">{point.rainfall} mm/hr</span>
-    </div>
-  );
-}
 
-export default function RainfallPanel({ forecast, selectedForecast }) {
-  if (!selectedForecast || !Array.isArray(forecast) || forecast.length === 0) {
-    return (
-      <section className="panel" aria-labelledby="rainfall-heading">
-        <div className="panel-header">
-          <h2 id="rainfall-heading">Rainfall Conditions</h2>
-        </div>
-        <div className="panel-body">
-          <p className="rainfall-panel__unavailable">Rainfall data is currently unavailable for this location.</p>
-        </div>
-      </section>
-    );
+function forecastLabel(intensity) {
+
+  if (intensity >= 75) {
+    return "Heavy rainfall expected";
   }
 
-  const chartData = forecast.map((f) => ({
-    ...f,
-    label: forecastMinutesLabel(f.forecast_minutes),
-  }));
+  if (intensity >= 40) {
+    return "Moderate to heavy rainfall expected";
+  }
 
-  const current = forecast[0];
+  if (intensity >= 15) {
+    return "Light to moderate rainfall expected";
+  }
+
+  return "Rainfall expected to remain light";
+
+}
+
+
+function CustomTooltip({
+  active,
+  payload,
+  label,
+}) {
+
+  if (
+    !active ||
+    !payload ||
+    !payload.length
+  ) {
+    return null;
+  }
+
 
   return (
-    <section className="panel" aria-labelledby="rainfall-heading">
+
+    <div className="rainfall-tooltip">
+
+      <span className="rainfall-tooltip__time mono">
+        {label}
+      </span>
+
+
+      <span className="rainfall-tooltip__value mono">
+        {payload[0].value} mm/hr
+      </span>
+
+    </div>
+
+  );
+
+}
+
+
+export default function RainfallPanel({
+  selected,
+  history,
+  analysis,
+}) {
+
+  if (!selected) {
+    return null;
+  }
+
+
+  const isNow =
+    selected.label === "NOW";
+
+
+  /*
+   * Use analyser rainfall
+   * for the current NOW state.
+   *
+   * Use predictor rainfall
+   * for future forecast steps.
+   */
+  const rainfallIntensity =
+    isNow && analysis
+      ? analysis.rainfall_smoothed
+      : selected.rainfallIntensity;
+
+
+  /*
+   * Calculate recent 3-hour rainfall
+   * from the last three historical
+   * observations before NOW.
+   */
+  const recentRainfall =
+    history && history.length >= 4
+      ? history
+          .slice(-4, -1)
+          .reduce(
+            (total, item) =>
+              total + item.intensity,
+            0
+          )
+      : selected.recentRainfall;
+
+
+  return (
+
+    <section
+      className="panel"
+      aria-labelledby="rainfall-heading"
+    >
+
       <div className="panel-header">
-        <h2 id="rainfall-heading">Rainfall Conditions</h2>
+
+        <h2 id="rainfall-heading">
+          Rainfall Conditions
+        </h2>
+
+
+        {isNow && analysis && (
+
+          <span className="eyebrow">
+            Real-time Analyser
+          </span>
+
+        )}
+
       </div>
+
+
       <div className="panel-body rainfall-panel__body">
+
+
+        {/* Rainfall readouts */}
+
         <div className="rainfall-panel__readouts">
+
+
+          {/* Current rainfall */}
+
           <div className="rainfall-readout">
+
             <span className="eyebrow">
-              {selectedForecast.forecast_minutes === 0 ? "Current Rainfall" : `Rainfall at ${forecastMinutesLabel(selectedForecast.forecast_minutes)}`}
+              Current Rainfall
             </span>
+
+
             <div>
+
               <span className="mono rainfall-readout__value">
-                {isValidNumber(selectedForecast.rainfall) ? selectedForecast.rainfall : "N/A"}
+                {rainfallIntensity ?? "N/A"}
               </span>
-              <span className="rainfall-readout__unit"> mm/hr</span>
+
+
+              <span className="rainfall-readout__unit">
+                {" "}mm/hr
+              </span>
+
             </div>
+
           </div>
-          {selectedForecast.forecast_minutes !== 0 && isValidNumber(current?.rainfall) && (
-            <div className="rainfall-readout">
-              <span className="eyebrow">Now (baseline)</span>
-              <div>
-                <span className="mono rainfall-readout__value">{current.rainfall}</span>
-                <span className="rainfall-readout__unit"> mm/hr</span>
-              </div>
+
+
+          {/* Recent rainfall */}
+
+          <div className="rainfall-readout">
+
+            <span className="eyebrow">
+              Recent (3 hr)
+            </span>
+
+
+            <div>
+
+              <span className="mono rainfall-readout__value">
+                {recentRainfall != null
+                  ? Math.round(recentRainfall)
+                  : "N/A"}
+              </span>
+
+
+              <span className="rainfall-readout__unit">
+                {" "}mm
+              </span>
+
             </div>
-          )}
+
+          </div>
+
+
+          {/* Forecast */}
+
           <div className="rainfall-readout rainfall-readout--forecast">
-            <span className="eyebrow">Model Status</span>
+
+            <span className="eyebrow">
+              Forecast
+            </span>
+
+
             <p className="rainfall-readout__forecast-text">
-              {selectedForecast.prediction_status || "No status available"}
+
+              {rainfallIntensity != null
+                ? forecastLabel(rainfallIntensity)
+                : "Forecast unavailable"}
+
             </p>
+
           </div>
+
         </div>
 
+
+        {/* Rainfall chart */}
+
         <div className="rainfall-panel__chart">
-          <span className="eyebrow">Rainfall Forecast — Next 3 Hours (mm/hr)</span>
+
+          <span className="eyebrow">
+            Rainfall Trend — Last 6 Hours (mm/hr)
+          </span>
+
+
           <div className="rainfall-panel__chart-container">
-            <ResponsiveContainer width="100%" height={160}>
-              <LineChart data={chartData} margin={{ top: 8, right: 12, left: -18, bottom: 0 }}>
-                <CartesianGrid stroke="var(--color-border)" strokeDasharray="0" vertical={false} />
+
+            <ResponsiveContainer
+              width="100%"
+              height={160}
+            >
+
+              <LineChart
+                data={history || []}
+                margin={{
+                  top: 8,
+                  right: 20,
+                  left: 10,
+                  bottom: 0,
+                }}
+              >
+
+                <CartesianGrid
+                  stroke="var(--color-border)"
+                  strokeDasharray="0"
+                  vertical={false}
+                />
+
+
                 <XAxis
-                  dataKey="label"
-                  tick={{ fontSize: 11, fill: "var(--color-text-muted)", fontFamily: "var(--font-mono)" }}
-                  axisLine={{ stroke: "var(--color-border-strong)" }}
+                  dataKey="time"
+                  tick={{
+                    fontSize: 11,
+                    fill: "var(--color-text-muted)",
+                    fontFamily: "var(--font-mono)",
+                  }}
+                  axisLine={{
+                    stroke: "var(--color-border-strong)",
+                  }}
                   tickLine={false}
                 />
+
+
                 <YAxis
-                  tick={{ fontSize: 11, fill: "var(--color-text-muted)", fontFamily: "var(--font-mono)" }}
+                  tick={{
+                    fontSize: 11,
+                    fill: "var(--color-text-muted)",
+                    fontFamily: "var(--font-mono)",
+                  }}
                   axisLine={false}
                   tickLine={false}
                   width={34}
                 />
-                <Tooltip content={<CustomTooltip />} />
+
+
+                <Tooltip
+                  content={
+                    <CustomTooltip />
+                  }
+                />
+
+
                 <Line
                   type="monotone"
-                  dataKey="rainfall"
+                  dataKey="intensity"
                   stroke="var(--color-blue-600)"
                   strokeWidth={2}
-                  dot={{ r: 2.5, fill: "var(--color-blue-600)" }}
-                  activeDot={{ r: 4 }}
+                  dot={{
+                    r: 2.5,
+                    fill: "var(--color-blue-600)",
+                  }}
+                  activeDot={{
+                    r: 4,
+                  }}
                 />
-                <ReferenceDot
-                  x={forecastMinutesLabel(selectedForecast.forecast_minutes)}
-                  y={selectedForecast.rainfall}
-                  r={5}
-                  fill="var(--color-navy-900)"
-                  stroke="#fff"
-                  strokeWidth={2}
-                />
+
               </LineChart>
+
             </ResponsiveContainer>
+
           </div>
+
         </div>
+
       </div>
+
     </section>
+
   );
+
 }

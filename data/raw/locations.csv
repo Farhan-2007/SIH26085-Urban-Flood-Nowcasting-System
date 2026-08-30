@@ -1,11 +1,11 @@
 location_id,location_name,latitude,longitude
-L001,Sample Road 1,19.0760,72.8777
-L002,Sample Road 2,19.0780,72.8800
-L003,Sample Road 3,19.0800,72.8820
-L004,Sample Road 4,19.0820,72.8850
-L005,Sample Road 5,19.0740,72.8750
-L006,Sample Road 6,19.0850,72.8900
-L007,Sample Road 7,19.0700,72.8720
-L008,Sample Road 8,19.0880,72.8950
-L009,Sample Road 9,19.0680,72.8680
-L010,Sample Road 10,19.0920,72.9000
+L001,Andheri East,19.0760,72.8777
+L002,Marol,19.0780,72.8800
+L003,Chakala,19.0800,72.8820
+L004,Vile Parle East,19.0820,72.8850
+L005,Andheri Metro,19.0740,72.8750
+L006,Saki Naka,19.0850,72.8900
+L007,Andheri West,19.0700,72.8720
+L008,Powai Junction,19.0880,72.8950
+L009,DN Nagar,19.0680,72.8680
+L010,Jogeshwari East,19.0920,72.9000

@@ -1,32 +1,18 @@
 import { MapContainer, TileLayer } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
+
 import LocationMarkers from "./LocationMarkers";
 import MapLegend from "./MapLegend";
+import RouteLines from "./RouteLines";
+
 
 export default function GISMap({
-  zones,
+  locations,
   selected,
-  analysis,
+  selectedLocation,
+  onSelectLocation,
+  routeData,
 }) {
-  /*
-   * NOW:
-   * Use the real-time Analyser risk.
-   *
-   * +1 / +2 / +3 HR:
-   * Use the Predictor forecast risk.
-   */
-  const isNow = selected?.label === "NOW";
-
-  const activeRiskScore =
-    isNow && analysis
-      ? analysis.flood_condition_index
-      : selected?.riskScore;
-
-  const activeRiskLevel =
-    isNow && analysis
-      ? analysis.condition
-      : selected?.riskLevel?.toUpperCase();
-
   return (
     <MapContainer
       center={[19.076, 72.8777]}
@@ -42,13 +28,23 @@ export default function GISMap({
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
 
-      <LocationMarkers
-        zones={zones}
-        activeRiskScore={activeRiskScore}
-        activeRiskLevel={activeRiskLevel}
-        forecastLabel={selected?.label}
+      {/* Draw safer route and avoided roads */}
+      <RouteLines
+        locations={locations}
+        roads={routeData?.roads || []}
+        routeData={routeData}
       />
-    <MapLegend />
+
+      {/* Flood risk location markers */}
+      <LocationMarkers
+        locations={locations}
+        forecastLabel={selected?.label}
+        selectedLocation={selectedLocation}
+        onSelectLocation={onSelectLocation}
+      />
+
+      <MapLegend />
+
     </MapContainer>
   );
 }
