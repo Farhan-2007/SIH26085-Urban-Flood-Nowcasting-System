@@ -140,6 +140,20 @@ export default function RouteLines({
         const from = locationMap[fromId];
         const to = locationMap[toId];
 
+        console.log("SAFE ROUTE ROAD:", {
+          road_id: road.road_id,
+          from_id: fromId,
+          to_id: toId,
+          from_name: from?.location_name,
+          to_name: to?.location_name,
+          from_coordinates: from
+            ? [from.latitude, from.longitude]
+            : "NOT FOUND",
+          to_coordinates: to
+            ? [to.latitude, to.longitude]
+            : "NOT FOUND",
+        });
+
         if (!from || !to) {
           return null;
         }
