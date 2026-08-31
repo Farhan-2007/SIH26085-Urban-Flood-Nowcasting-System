@@ -1,104 +1,95 @@
 """
 routing_engine.py
-------------------
+-----------------
 
-Safe Route Intelligence engine.
+Main real-road flood-aware routing engine.
 
-Uses real Urban Flood dataset locations while keeping the
-existing road network and risk-routing logic.
+Flow:
+
+Start + Destination
+        ↓
+OSRM / OpenStreetMap
+        ↓
+Real road alternatives
+        ↓
+Flood-risk data from Predictor
+        ↓
+Risk mapping
+        ↓
+Risk-adjusted route selection
+        ↓
+Safe route JSON
 """
 
-from .road_network import RoadNetwork
-from .affected_roads import (
-    get_affected_roads,
-    get_shifting_risk,
-)
-from .safer_route import find_safer_route
-
-from .real_road_data import build_real_roads
-
-from backend.predictor import (
-    predict_from_dataset,
-)
 
 from backend.data_loader import (
     get_all_locations,
 )
 
+from backend.predictor import (
+    predict_from_dataset,
+)
 
-# ============================================================
-# NORMALIZE REAL LOCATIONS FOR ROUTING ENGINE
-# ============================================================
+from .road_network import RoadNetwork
 
-def normalize_locations_for_routing(locations):
+from .affected_roads import (
+    get_affected_roads,
+    get_shifting_risk,
+)
 
-    normalized_locations = []
-
-    for location in locations:
-
-        normalized_locations.append({
-
-            # RoadNetwork expects these fields
-            "id":
-                location["location_id"],
-
-            "name":
-                location["location_name"],
-
-
-            # Keep original fields as well
-            "location_id":
-                location["location_id"],
-
-            "location_name":
-                location["location_name"],
-
-            "latitude":
-                location["latitude"],
-
-            "longitude":
-                location["longitude"],
-
-        })
-
-    return normalized_locations
+from .safer_route import (
+    find_safer_route,
+)
 
 
 # ============================================================
-# BUILD REAL RISK DATA FROM PREDICTOR
+# LOAD REAL FLOOD-RISK DATA
 # ============================================================
 
 def build_real_risk_data(
     forecast_minutes=0
 ):
 
-    real_locations = get_all_locations()
+    locations = get_all_locations()
 
     risk_data = {}
 
-    for location in real_locations:
+    for location in locations:
 
-        location_id = location["location_id"]
+        location_id = (
+            location["location_id"]
+        )
 
         predictions = predict_from_dataset(
             location_id
         )
 
-        # Select prediction for requested time
         selected_prediction = next(
+
             (
+
                 prediction
-                for prediction in predictions
-                if prediction["forecast_minutes"]
+
+                for prediction
+                in predictions
+
+                if prediction[
+                    "forecast_minutes"
+                ]
                 == forecast_minutes
+
             ),
-            None,
+
+            None
+
         )
 
         if selected_prediction is None:
             continue
 
-        risk_data[location_id] = {
+        risk_data[
+            location_id
+        ] = {
 
             "risk_score":
                 selected_prediction[
@@ -114,42 +105,53 @@ def build_real_risk_data(
                 selected_prediction[
                     "prediction_status"
                 ],
+
         }
 
     return risk_data
+
 
 # ============================================================
 # LOAD ROUTING INPUTS
 # ============================================================
 
-def load_routing_inputs(forecast_minutes=0):
+def load_routing_inputs(
+    forecast_minutes=0
+):
 
-    # Load actual Mumbai locations
-    real_locations = get_all_locations()
+    locations = get_all_locations()
 
-
-    # Convert location_id -> id
-    locations = (
-        normalize_locations_for_routing(
-            real_locations
-        )
+    risk_data = build_real_risk_data(
+        forecast_minutes
     )
-
-
-    # Existing road topology
-    roads = build_real_roads(real_locations,max_distance_km=2.0)
-
-
-    # Existing routing risk data
-    # Build real risk data from Predictor
-    risk_data = build_real_risk_data(forecast_minutes)  
-
 
     return (
         locations,
-        roads,
         risk_data,
     )
+
+
+# ============================================================
+# FIND LOCATION BY ID
+# ============================================================
+
+def get_location_by_id(
+    locations,
+    location_id
+):
+
+    for location in locations:
+
+        if (
+            location[
+                "location_id"
+            ]
+            == location_id
+        ):
+
+            return location
+
+    return None
 
 
 # ============================================================
@@ -157,90 +159,264 @@ def load_routing_inputs(forecast_minutes=0):
 # ============================================================
 
 def build_routing_report(
-    start_id,
-    end_id,
+
+    start_lat=None,
+    start_lon=None,
+
+    end_lat=None,
+    end_lon=None,
+
     forecast_minutes=0,
+
+    start_id=None,
+    end_id=None,
+
     locations=None,
-    roads=None,
     risk_data=None,
+
 ):
 
+    # --------------------------------------------------------
+    # Load routing data
+    # --------------------------------------------------------
+
+    if locations is None:
+
+        locations = get_all_locations()
+
+    if risk_data is None:
+
+        risk_data = build_real_risk_data(
+            forecast_minutes
+        )
+
+    # --------------------------------------------------------
+    # Support location IDs for backend compatibility
+    # --------------------------------------------------------
+
+    if start_id:
+
+        start_location = (
+            get_location_by_id(
+                locations,
+                start_id
+            )
+        )
+
+        if start_location is None:
+
+            return {
+
+                "found": False,
+
+                "error":
+                    f"Start location '{start_id}' "
+                    f"not found",
+
+            }
+
+        start_lat = (
+            start_location[
+                "latitude"
+            ]
+        )
+
+        start_lon = (
+            start_location[
+                "longitude"
+            ]
+        )
+
+    if end_id:
+
+        end_location = (
+            get_location_by_id(
+                locations,
+                end_id
+            )
+        )
+
+        if end_location is None:
+
+            return {
+
+                "found": False,
+
+                "error":
+                    f"Destination location '{end_id}' "
+                    f"not found",
+
+            }
+
+        end_lat = (
+            end_location[
+                "latitude"
+            ]
+        )
+
+        end_lon = (
+            end_location[
+                "longitude"
+            ]
+        )
+
+    # --------------------------------------------------------
+    # Validate coordinates
+    # --------------------------------------------------------
+
     if (
-        locations is None
-        or roads is None
-        or risk_data is None
+        start_lat is None
+        or start_lon is None
+        or end_lat is None
+        or end_lon is None
     ):
 
-        (
-            locations,
-            roads,
-            risk_data,
-        ) = load_routing_inputs(forecast_minutes)
+        return {
 
+            "found": False,
 
-    # Build network
-    network = RoadNetwork(
-        locations,
-        roads,
+            "error":
+                (
+                    "Start and destination "
+                    "coordinates are required"
+                ),
+
+        }
+
+    # --------------------------------------------------------
+    # Real OSRM routing
+    # --------------------------------------------------------
+
+    network = RoadNetwork()
+
+    routes = network.get_routes(
+
+        start_lat=float(
+            start_lat
+        ),
+
+        start_lon=float(
+            start_lon
+        ),
+
+        end_lat=float(
+            end_lat
+        ),
+
+        end_lon=float(
+            end_lon
+        ),
+
     )
 
+    if not routes:
 
-    # Find affected roads
+        return {
+
+            "found": False,
+
+            "error":
+                "No real road route found",
+
+        }
+
+    # --------------------------------------------------------
+    # Flood affected locations
+    # --------------------------------------------------------
+
     affected = get_affected_roads(
-        network,
-        risk_data,
+
+        locations=locations,
+
+        risk_data=risk_data,
+
     )
 
+    # --------------------------------------------------------
+    # Shifting risk
+    # --------------------------------------------------------
 
-    # Find changing risk
     shifting = get_shifting_risk(
         risk_data
     )
 
+    # --------------------------------------------------------
+    # Select safest route
+    # --------------------------------------------------------
 
-    # Find safer route
-    route = find_safer_route(
-        network,
-        risk_data,
-        start_id,
-        end_id,
+    safer_route = find_safer_route(
+
+        routes=routes,
+
+        locations=locations,
+
+        risk_data=risk_data,
+
     )
 
+    # --------------------------------------------------------
+    # Final JSON
+    # --------------------------------------------------------
 
     return {
 
-    "forecast_minutes":forecast_minutes,
-    
-    "affected_roads": affected,
+        "found":
+            safer_route[
+                "found"
+            ],
 
-    "shifting_risk_locations": shifting,
+        "forecast_minutes":
+            forecast_minutes,
 
-    "safer_route": route,
+        "start":
+            {
 
-    # Send all roads so React can draw
-    # roads that are part of the safe route.
-    "roads": roads,
-}
+                "latitude":
+                    float(
+                        start_lat
+                    ),
 
+                "longitude":
+                    float(
+                        start_lon
+                    ),
 
-# ============================================================
-# TEST
-# ============================================================
+                "location_id":
+                    start_id,
 
-if __name__ == "__main__":
+            },
 
-    import json
+        "destination":
+            {
 
+                "latitude":
+                    float(
+                        end_lat
+                    ),
 
-    report = build_routing_report(
-        start_id="L001",
-        end_id="L010",
-    )
+                "longitude":
+                    float(
+                        end_lon
+                    ),
 
+                "location_id":
+                    end_id,
 
-    print(
-        json.dumps(
-            report,
-            indent=2,
-        )
-    )
+            },
+
+        "route":
+            safer_route,
+
+        "affected_roads":
+            affected,
+
+        "shifting_risk_locations":
+            shifting,
+
+        "routing_provider":
+            "OSRM + OpenStreetMap",
+
+        "route_count_considered":
+            len(routes),
+
+    }
