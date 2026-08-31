@@ -56,6 +56,7 @@ def get_affected_roads(network, risk_data):
                 "risk_level": worst_level,
                 "trend": worst_trend,
                 "status": status,
+                "geometry": road.get("geometry", []),
             })
 
     return affected

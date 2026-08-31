@@ -1,212 +1,80 @@
 import { Polyline, Popup } from "react-leaflet";
 
-export default function RouteLines({
-  locations,
-  routeData,
-}) {
-  if (!locations || !routeData) {
+export default function RouteLines({ routeData }) {
+
+  if (!routeData) {
     return null;
   }
 
-  const saferRoute = routeData.safer_route;
 
-  if (!saferRoute?.found) {
+  // ==========================================================
+  // REAL OSRM SAFE ROUTE
+  // ==========================================================
+
+  const osrmRoute =
+    routeData.osrm_route;
+
+  const geometry =
+    osrmRoute?.geometry || [];
+
+
+  const positions =
+    geometry
+      .filter(
+        (coordinate) =>
+          Array.isArray(coordinate) &&
+          coordinate.length >= 2
+      )
+      .map(
+        ([longitude, latitude]) => [
+          latitude,
+          longitude,
+        ]
+      );
+
+
+  if (positions.length < 2) {
     return null;
   }
-
-  const roads = routeData.roads || [];
-
-  const roadsUsed =
-    saferRoute.roads_used || [];
-
-  const avoidedRoads =
-    saferRoute.avoided_high_risk_roads || [];
-
-
-  // ------------------------------------
-  // LOCATION LOOKUP
-  // ------------------------------------
-
-  const locationMap = {};
-
-  locations.forEach((location) => {
-
-    locationMap[location.location_id] = location;
-
-  });
-
-
-  // ------------------------------------
-  // SAFE ROUTE ROADS
-  // ------------------------------------
-
-  const safeRouteRoads =
-    roads.filter((road) =>
-      roadsUsed.includes(road.road_id)
-    );
-
-
-  // ------------------------------------
-  // AFFECTED ROADS
-  // ------------------------------------
-
-  const affectedRoads =
-    routeData.affected_roads || [];
 
 
   return (
-    <>
+    <Polyline
+      positions={positions}
+      pathOptions={{
+        color: "#2563eb",
+        weight: 8,
+        opacity: 0.95,
+      }}
+    >
+      <Popup>
 
-      {/* ============================ */}
-      {/* AVOIDED HIGH RISK ROADS RED */}
-      {/* ============================ */}
+        <strong>
+          🛣️ Safe Route
+        </strong>
 
-      {affectedRoads
-        .filter((road) =>
-          avoidedRoads.includes(road.road_id)
-        )
-        .map((road) => {
+        <br />
 
-          const fromId = road.from_id ?? road.from;
-          const toId = road.to_id ?? road.to;
+        Distance:{" "}
+        {osrmRoute.distance_km} km
 
-          const from = locationMap[fromId];
-          const to = locationMap[toId];
+        <br />
 
-          if (!from || !to) {
-            return null;
-          }
+        Estimated time:{" "}
+        {osrmRoute.duration_minutes} min
 
-          return (
-            <Polyline
-              key={`avoided-${road.road_id}`}
+        <br />
 
-              positions={[
-                [
-                  from.latitude,
-                  from.longitude,
-                ],
+        Flood Risk:{" "}
+        {routeData.osrm_route_risk?.risk_level || "Low"}
 
-                [
-                  to.latitude,
-                  to.longitude,
-                ],
-              ]}
+        <br />
 
-              pathOptions={{
-                color: "#ef4444",
-                weight: 5,
-                opacity: 0.8,
-                dashArray: "10 10",
-              }}
-            >
+        Risk Score:{" "}
+        {routeData.osrm_route_risk?.risk_score ?? 0}
 
-              <Popup>
+      </Popup>
 
-                <strong>
-                  ⚠ Avoided High-Risk Road
-                </strong>
-
-                <br />
-
-                Road: {road.road_id}
-
-                <br />
-
-                {road.from_name}
-                {" → "}
-                {road.to_name}
-
-                <br />
-
-                Risk: {road.risk_level}
-
-              </Popup>
-
-            </Polyline>
-          );
-        })}
-
-
-      {/* ============================ */}
-      {/* SAFE ROUTE BLUE */}
-      {/* ============================ */}
-
-      {safeRouteRoads.map((road) => {
-
-        const fromId = road.from_id ?? road.from;
-        const toId = road.to_id ?? road.to;
-
-        const from = locationMap[fromId];
-        const to = locationMap[toId];
-
-        console.log("SAFE ROUTE ROAD:", {
-          road_id: road.road_id,
-          from_id: fromId,
-          to_id: toId,
-          from_name: from?.location_name,
-          to_name: to?.location_name,
-          from_coordinates: from
-            ? [from.latitude, from.longitude]
-            : "NOT FOUND",
-          to_coordinates: to
-            ? [to.latitude, to.longitude]
-            : "NOT FOUND",
-        });
-
-        if (!from || !to) {
-          return null;
-        }
-
-        return (
-          <Polyline
-            key={`safe-${road.road_id}`}
-
-            positions={[
-              [
-                from.latitude,
-                from.longitude,
-              ],
-
-              [
-                to.latitude,
-                to.longitude,
-              ],
-            ]}
-
-            pathOptions={{
-              color: "#2563eb",
-              weight: 7,
-              opacity: 1,
-            }}
-          >
-
-            <Popup>
-
-              <strong>
-                🛣️ Safer Route
-              </strong>
-
-              <br />
-
-              Road: {road.road_id}
-
-              <br />
-
-              {from.location_name}
-              {" → "}
-              {to.location_name}
-
-              <br />
-
-              Distance: {road.distance_km} km
-
-            </Popup>
-
-          </Polyline>
-        );
-      })}
-
-    </>
+    </Polyline>
   );
 }
