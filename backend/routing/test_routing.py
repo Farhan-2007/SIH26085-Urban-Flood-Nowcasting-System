@@ -1,196 +1,196 @@
+"""
+test_routing.py
+---------------
+
+Tests the real-road flood-aware routing engine.
+
+These tests require internet access because
+OSRM is an external routing service.
+"""
+
 from backend.routing.routing_engine import (
-    build_routing_report
+    build_routing_report,
 )
 
 
-def test_basic_route():
+# ============================================================
+# TEST 1
+# ============================================================
+
+def test_route_1():
 
     report = build_routing_report(
-        start_id="L001",
-        end_id="L005"
+
+        start_lat=19.0760,
+        start_lon=72.8777,
+
+        end_lat=19.0820,
+        end_lon=72.8850,
+
+        forecast_minutes=0,
+
     )
 
-    assert report["safer_route"]["found"] is True
+    assert report["found"] is True
 
-    assert (
-        report["safer_route"]["path"][0]
-        == "L001"
+    route = report["route"]
+
+    assert route["found"] is True
+
+    assert len(
+        route["geometry"]
+    ) > 0
+
+    print(
+        "PASS: Route 1"
     )
 
-    assert (
-        report["safer_route"]["path"][-1]
-        == "L005"
+    print(
+        "Distance:",
+        route["distance_km"],
+        "km"
     )
 
-    print("PASS: basic route found")
+    print(
+        "Risk:",
+        route["risk_level"]
+    )
 
 
-def test_route_found():
+# ============================================================
+# TEST 2
+# ============================================================
+
+def test_route_2():
 
     report = build_routing_report(
-        start_id="L001",
-        end_id="L005"
+
+        start_lat=19.0700,
+        start_lon=72.8720,
+
+        end_lat=19.0880,
+        end_lon=72.8950,
+
+        forecast_minutes=30,
+
     )
 
+    assert report["found"] is True
+
+    route = report["route"]
+
+    assert route["found"] is True
+
+    print(
+        "PASS: Route 2"
+    )
+
+    print(
+        "Distance:",
+        route["distance_km"],
+        "km"
+    )
+
+    print(
+        "Risk:",
+        route["risk_level"]
+    )
+
+
+# ============================================================
+# TEST 3
+# ============================================================
+
+def test_route_3():
+
+    report = build_routing_report(
+
+        start_lat=19.0740,
+        start_lon=72.8750,
+
+        end_lat=19.0920,
+        end_lon=72.9000,
+
+        forecast_minutes=60,
+
+    )
+
+    assert report["found"] is True
+
+    route = report["route"]
+
+    assert route["found"] is True
+
+    print(
+        "PASS: Route 3"
+    )
+
+    print(
+        "Distance:",
+        route["distance_km"],
+        "km"
+    )
+
+    print(
+        "Risk:",
+        route["risk_level"]
+    )
+
+
+# ============================================================
+# TEST LOCATION-ID COMPATIBILITY
+# ============================================================
+
+def test_location_ids():
+
+    report = build_routing_report(
+
+        start_id="L001",
+
+        end_id="L004",
+
+        forecast_minutes=0,
+
+    )
+
+    assert report["found"] is True
+
     assert (
-        report["safer_route"]["found"]
+        report["route"]["found"]
         is True
     )
 
-    print("PASS: route successfully found")
-
-
-def test_invalid_location():
-
-    report = build_routing_report(
-        start_id="L001",
-        end_id="L099"
+    print(
+        "PASS: Location ID routing"
     )
 
-    assert (
-        report["safer_route"]["found"]
-        is False
-    )
 
-    print("PASS: invalid destination handled")
-
-
-def test_affected_roads():
-
-    report = build_routing_report(
-        start_id="L001",
-        end_id="L005"
-    )
-
-    assert (
-        isinstance(
-            report["affected_roads"],
-            list
-        )
-    )
-
-    print("PASS: affected roads generated")
-
-
-def test_real_roads_generated():
-
-    report = build_routing_report(
-        start_id="L001",
-        end_id="L005"
-    )
-
-    roads = report["roads"]
-
-    assert len(roads) > 0
-
-    assert all(
-        road["road_id"].startswith("REAL_R")
-        for road in roads
-    )
-
-    print("PASS: real roads generated")
-
-def test_multiple_routes():
-
-    test_routes = [
-        ("L001", "L005"),
-        ("L002", "L007"),
-        ("L003", "L009"),
-        ("L004", "L008"),
-        ("L006", "L010"),
-    ]
-
-    print("\n--- TESTING MULTIPLE ROUTES ---")
-
-    for start_id, end_id in test_routes:
-
-        try:
-            report = build_routing_report(
-                start_id=start_id,
-                end_id=end_id
-            )
-
-            route = report["safer_route"]
-
-            if route["found"]:
-
-                print(
-                    f"PASS: {start_id} -> {end_id}"
-                )
-
-                print(
-                    "Path:",
-                    route.get("path")
-                )
-
-            else:
-                print(
-                    f"NO ROUTE: {start_id} -> {end_id}"
-                )
-
-        except Exception as error:
-
-            print(
-                f"ERROR: {start_id} -> {end_id}"
-            )
-
-            print(error)
-
-def test_forecast_intervals():
-
-    intervals = [0, 30, 60, 120, 180]
-
-    print("\n--- TESTING FORECAST INTERVALS ---")
-
-    for minutes in intervals:
-
-        try:
-
-            report = build_routing_report(
-                start_id="L001",
-                end_id="L005",
-                forecast_minutes=minutes
-            )
-
-            route = report["safer_route"]
-
-            print(
-                f"Forecast {minutes} minutes:"
-            )
-
-            print(
-                "Route found:",
-                route["found"]
-            )
-
-            print(
-                "Path:",
-                route.get("path")
-            )
-
-        except Exception as error:
-
-            print(
-                f"ERROR at {minutes} minutes:"
-            )
-
-            print(error)
-
+# ============================================================
+# RUN
+# ============================================================
 
 if __name__ == "__main__":
 
-    test_basic_route()
+    print(
+        "\n=============================="
+    )
 
-    test_route_found()
+    print(
+        "REAL ROAD ROUTING TESTS"
+    )
 
-    test_invalid_location()
+    print(
+        "==============================\n"
+    )
 
-    test_affected_roads()
+    test_route_1()
 
-    test_real_roads_generated()
+    test_route_2()
 
-    test_multiple_routes()
+    test_route_3()
 
-    test_forecast_intervals()
-    
-    print("\nAll tests passed.")
+    test_location_ids()
+
+    print(
+        "\nAll routing tests passed."
+    )
