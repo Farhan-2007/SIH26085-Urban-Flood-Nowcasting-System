@@ -354,7 +354,14 @@ def analyse():
 # ROUTING ENDPOINT
 # ============================================================
 
-@api.route("/routing", methods=["GET"])
+# ============================================================
+# REAL ROAD FLOOD-AWARE ROUTING
+# ============================================================
+
+@api.route(
+    "/routing",
+    methods=["GET"]
+)
 def routing():
 
     start_id = request.args.get(
@@ -365,255 +372,140 @@ def routing():
         "end_id"
     )
 
+    start_lat = request.args.get(
+        "start_lat",
+        type=float
+    )
+
+    start_lon = request.args.get(
+        "start_lon",
+        type=float
+    )
+
+    end_lat = request.args.get(
+        "end_lat",
+        type=float
+    )
+
+    end_lon = request.args.get(
+        "end_lon",
+        type=float
+    )
+
     forecast_minutes = request.args.get(
         "forecast_minutes",
         default=0,
         type=int
     )
 
-    if not start_id or not end_id:
+    # --------------------------------------------------------
+    # Validate forecast interval
+    # --------------------------------------------------------
+
+    valid_intervals = [
+        0,
+        30,
+        60,
+        120,
+        180,
+    ]
+
+    if forecast_minutes not in valid_intervals:
 
         return jsonify({
+
             "error":
-                "start_id and end_id are required"
+                (
+                    "forecast_minutes must be "
+                    "0, 30, 60, 120, or 180"
+                )
+
+        }), 400
+
+    # --------------------------------------------------------
+    # Either coordinates OR location IDs
+    # --------------------------------------------------------
+
+    coordinates_available = all(
+        value is not None
+        for value in [
+            start_lat,
+            start_lon,
+            end_lat,
+            end_lon,
+        ]
+    )
+
+    ids_available = (
+        start_id is not None
+        and end_id is not None
+    )
+
+    if not (
+        coordinates_available
+        or ids_available
+    ):
+
+        return jsonify({
+
+            "error":
+                (
+                    "Provide either "
+                    "start_lat, start_lon, "
+                    "end_lat, end_lon "
+                    "or start_id and end_id"
+                )
+
         }), 400
 
     try:
 
-        valid_intervals = [
-            0,
-            30,
-            60,
-            120,
-            180,
-        ]
+        report = build_routing_report(
 
-        if forecast_minutes not in valid_intervals:
+            start_lat=start_lat,
+            start_lon=start_lon,
 
-            return jsonify({
+            end_lat=end_lat,
+            end_lon=end_lon,
 
-                "error":
-                    (
-                        "forecast_minutes must be "
-                        "0, 30, 60, 120, or 180"
-                    )
+            start_id=start_id,
+            end_id=end_id,
 
-            }), 400
+            forecast_minutes=
+                forecast_minutes,
 
-        report = (
-            build_routing_report(
-                start_id=start_id,
-                end_id=end_id,
-                forecast_minutes=forecast_minutes
-            )
         )
+
+        if not report.get(
+            "found",
+            False
+        ):
+
+            return jsonify(
+                report
+            ), 404
 
         return jsonify(
             report
         ), 200
 
-    except Exception as error:
-
-        return jsonify({
-            "error": str(error)
-        }), 500
-
-
-# ============================================================
-# ALL LOCATIONS RISK
-# ============================================================
-
-@api.route(
-    "/locations/risk",
-    methods=["GET"]
-)
-def get_locations_risk():
-
-    try:
-
-        forecast_minutes = (
-            request.args.get(
-                "forecast_minutes",
-                default=0,
-                type=int
-            )
-        )
-
-        valid_intervals = [
-            0,
-            30,
-            60,
-            120,
-            180
-        ]
-
-        if (
-            forecast_minutes
-            not in valid_intervals
-        ):
-
-            return jsonify({
-
-                "error":
-                    (
-                        "forecast_minutes must be "
-                        "one of 0, 30, 60, 120, or 180"
-                    )
-
-            }), 400
-
-        locations = (
-            get_all_locations()
-        )
-
-        results = []
-
-        for location in locations:
-
-            weather = {
-
-                "rainfall":
-                    location[
-                        "rainfall"
-                    ],
-
-                "water_level":
-                    location[
-                        "water_level"
-                    ],
-
-                "soil_saturation":
-                    location[
-                        "soil_saturation"
-                    ],
-
-                "lightning":
-                    False,
-            }
-
-            forecast = (
-                predict_flood_forecast(
-                    street=location,
-                    weather=weather
-                )
-            )
-
-            selected_prediction = (
-                next(
-
-                    (
-                        item
-
-                        for item in forecast
-
-                        if item[
-                            "forecast_minutes"
-                        ]
-                        == forecast_minutes
-                    ),
-
-                    None
-
-                )
-            )
-
-            if selected_prediction:
-
-                results.append({
-
-                    "location_id":
-                        location[
-                            "location_id"
-                        ],
-
-                    "location_name":
-                        location[
-                            "location_name"
-                        ],
-
-                    "latitude":
-                        location[
-                            "latitude"
-                        ],
-
-                    "longitude":
-                        location[
-                            "longitude"
-                        ],
-
-                    # ------------------------------------------
-                    # STATIC SITE CHARACTERISTICS
-                    # ------------------------------------------
-
-                    "elevation":
-                        location.get(
-                            "elevation"
-                        ),
-
-                    "slope":
-                        location.get(
-                            "slope"
-                        ),
-
-                    "imperviousness":
-                        location.get(
-                            "imperviousness"
-                        ),
-
-                    # ------------------------------------------
-                    # FLOOD RISK DATA
-                    # ------------------------------------------
-
-                    "risk_score":
-                        selected_prediction[
-                            "risk_score"
-                        ],
-
-                    "risk_level":
-                        selected_prediction[
-                            "risk_level"
-                        ],
-
-                    "rainfall":
-                        selected_prediction[
-                            "rainfall"
-                        ],
-
-                    "surface_runoff":
-                        selected_prediction[
-                            "surface_runoff"
-                        ],
-
-                    "drainage_capacity_used":
-                        selected_prediction[
-                            "drainage_capacity_used"
-                        ],
-
-                    "forecast_minutes":
-                        forecast_minutes,
-
-                    "prediction_status":
-                        selected_prediction[
-                            "prediction_status"
-                        ],
-                })
+    except ValueError as error:
 
         return jsonify({
 
-            "forecast_minutes":
-                forecast_minutes,
+            "error":
+                str(error)
 
-            "locations":
-                results
-
-        }), 200
+        }), 400
 
     except Exception as error:
 
         return jsonify({
-            "error": str(error)
-        }), 500
 
+            "error":
+                str(error)
+
+        }), 500
 
 # ============================================================
 # RAINFALL HISTORY
