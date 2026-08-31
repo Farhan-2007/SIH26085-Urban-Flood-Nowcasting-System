@@ -1,44 +1,26 @@
-import { useEffect, useRef, useState } from "react";
 import RiskBadge from "./RiskBadge";
 import {
   normalizeRiskLevel,
   scoreToRiskLevel,
 } from "../utils/riskLevel";
-import "./ForecastTimeline.css";
 
-const AUTOPLAY_INTERVAL_MS = 2200;
+import "./ForecastTimeline.css";
 
 export default function ForecastTimeline({
   forecast = [],
   selectedStep = 0,
   onSelectStep,
 }) {
-  const [playing, setPlaying] = useState(true);
-  const intervalRef = useRef(null);
+  // ==========================================================
+  // NO AUTOPLAY
+  // ==========================================================
+  // Forecast changes ONLY when the user selects a time.
+  // ==========================================================
 
-  useEffect(() => {
-    if (!playing || !forecast.length) {
-      return undefined;
-    }
 
-    intervalRef.current = setInterval(() => {
-      onSelectStep((current) => {
-        const next = current + 1;
-
-        return next >= forecast.length
-          ? 0
-          : next;
-      });
-    }, AUTOPLAY_INTERVAL_MS);
-
-    return () => {
-      clearInterval(intervalRef.current);
-    };
-  }, [
-    playing,
-    forecast.length,
-    onSelectStep,
-  ]);
+  // ==========================================================
+  // NO FORECAST DATA
+  // ==========================================================
 
   if (!forecast.length) {
     return (
@@ -62,20 +44,41 @@ export default function ForecastTimeline({
     );
   }
 
+
+  // ==========================================================
+  // CURRENT SELECTED FORECAST
+  // ==========================================================
+
   const currentStep =
-    forecast[selectedStep] || forecast[0];
+    forecast[selectedStep] ||
+    forecast[0];
+
+
+  // ==========================================================
+  // MAX FORECAST HOURS
+  // ==========================================================
 
   const maxHours =
     forecast[forecast.length - 1]
       ?.timeOffsetHours || 1;
 
+
+  // ==========================================================
+  // TIMELINE POSITION
+  // ==========================================================
+
   function positionFor(hours) {
     return (hours / maxHours) * 100;
   }
 
-  function handleKeyDown(e) {
-    if (e.key === "ArrowRight") {
-      setPlaying(false);
+
+  // ==========================================================
+  // KEYBOARD NAVIGATION
+  // ==========================================================
+
+  function handleKeyDown(event) {
+
+    if (event.key === "ArrowRight") {
 
       onSelectStep((step) =>
         Math.min(
@@ -83,68 +86,103 @@ export default function ForecastTimeline({
           forecast.length - 1
         )
       );
+
     }
 
-    if (e.key === "ArrowLeft") {
-      setPlaying(false);
+
+    if (event.key === "ArrowLeft") {
 
       onSelectStep((step) =>
-        Math.max(step - 1, 0)
+        Math.max(
+          step - 1,
+          0
+        )
       );
+
     }
+
   }
 
+
+  // ==========================================================
+  // SELECT FORECAST STEP
+  // ==========================================================
+
   function selectStep(index) {
-    setPlaying(false);
+
     onSelectStep(index);
+
   }
+
 
   return (
     <section
       className="panel"
       aria-labelledby="timeline-heading"
     >
+
+      {/* ================================================== */}
+      {/* HEADER */}
+      {/* ================================================== */}
+
       <div className="panel-header">
+
         <h2 id="timeline-heading">
           0–3 Hour Flood Risk Forecast
         </h2>
 
-        <button
-          type="button"
-          className="timeline__play-toggle"
-          onClick={() =>
-            setPlaying((value) => !value)
-          }
-          aria-pressed={playing}
-        >
-          {playing
-            ? "⏸ Pause"
-            : "▶ Play Forecast"}
-        </button>
+        <span className="eyebrow">
+          Select forecast time
+        </span>
+
       </div>
 
+
       <div className="panel-body">
+
+
+        {/* ================================================== */}
+        {/* TIMELINE */}
+        {/* ================================================== */}
 
         <div
           className="timeline"
           role="slider"
           tabIndex={0}
+
           aria-valuemin={0}
+
           aria-valuemax={
             forecast.length - 1
           }
-          aria-valuenow={selectedStep}
+
+          aria-valuenow={
+            selectedStep
+          }
+
           aria-valuetext={
             currentStep.label
           }
+
           aria-label="Forecast time selector"
-          onKeyDown={handleKeyDown}
+
+          onKeyDown={
+            handleKeyDown
+          }
         >
+
+
+          {/* ================================================== */}
+          {/* TRACK */}
+          {/* ================================================== */}
 
           <div className="timeline__track">
 
+            {/* CURRENT PROGRESS */}
+
             <div
               className="timeline__track-fill"
+
               style={{
                 width: `${positionFor(
                   currentStep.timeOffsetHours
@@ -152,60 +190,97 @@ export default function ForecastTimeline({
               }}
             />
 
+
+            {/* ================================================== */}
+            {/* FORECAST NODES */}
+            {/* ================================================== */}
+
             {forecast.map(
               (step, index) => (
+
                 <button
                   key={step.id}
+
                   type="button"
-                  className={`timeline__node ${
-                    index === selectedStep
-                      ? "timeline__node--active"
-                      : ""
-                  }`}
+
+                  className={
+                    `timeline__node ${
+                      index === selectedStep
+                        ? "timeline__node--active"
+                        : ""
+                    }`
+                  }
+
                   style={{
                     left: `${positionFor(
                       step.timeOffsetHours
                     )}%`,
                   }}
+
                   onClick={() =>
                     selectStep(index)
                   }
-                  aria-label={`Show forecast for ${step.label}`}
+
+                  aria-label={
+                    `Show forecast for ${step.label}`
+                  }
+
                   aria-pressed={
                     index === selectedStep
                   }
                 >
+
                   <span className="timeline__node-dot" />
+
                 </button>
+
               )
             )}
 
           </div>
 
 
+          {/* ================================================== */}
+          {/* FORECAST TIME LABELS */}
+          {/* ================================================== */}
+
           <div className="timeline__labels">
 
             {forecast.map(
               (step, index) => (
+
                 <button
                   key={step.id}
+
                   type="button"
-                  className={`timeline__label ${
-                    index === selectedStep
-                      ? "timeline__label--active"
-                      : ""
-                  }`}
+
+                  className={
+                    `timeline__label ${
+                      index === selectedStep
+                        ? "timeline__label--active"
+                        : ""
+                    }`
+                  }
+
                   style={{
                     left: `${positionFor(
                       step.timeOffsetHours
                     )}%`,
                   }}
+
                   onClick={() =>
                     selectStep(index)
                   }
+
+                  aria-pressed={
+                    index === selectedStep
+                  }
                 >
+
                   {step.label}
+
                 </button>
+
               )
             )}
 
@@ -213,6 +288,10 @@ export default function ForecastTimeline({
 
         </div>
 
+
+        {/* ================================================== */}
+        {/* FORECAST SUMMARY CARDS */}
+        {/* ================================================== */}
 
         <div className="timeline__summary">
 
@@ -227,43 +306,65 @@ export default function ForecastTimeline({
                   step.riskScore
                 );
 
+
               return (
                 <button
                   type="button"
+
                   key={step.id}
-                  className={`timeline__summary-card ${
-                    index === selectedStep
-                      ? "timeline__summary-card--active"
-                      : ""
-                  }`}
+
+                  className={
+                    `timeline__summary-card ${
+                      index === selectedStep
+                        ? "timeline__summary-card--active"
+                        : ""
+                    }`
+                  }
+
                   onClick={() =>
                     selectStep(index)
                   }
                 >
 
+                  {/* TIME */}
+
                   <span className="eyebrow">
                     {step.label}
                   </span>
 
+
+                  {/* RISK SCORE */}
+
                   <div className="timeline__summary-score mono">
-                    {step.riskScore ?? "N/A"}
+
+                    {step.riskScore ??
+                      "N/A"}
+
                   </div>
 
+
+                  {/* RISK LEVEL */}
+
                   {level && (
+
                     <RiskBadge
                       level={level}
                       size="sm"
                     />
+
                   )}
 
                 </button>
               );
+
             }
           )}
 
         </div>
 
+
       </div>
+
     </section>
   );
 }

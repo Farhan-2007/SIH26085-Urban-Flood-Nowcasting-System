@@ -9,13 +9,19 @@ existing road network and risk-routing logic.
 """
 
 from .road_network import RoadNetwork
+
 from .affected_roads import (
     get_affected_roads,
     get_shifting_risk,
 )
-from .safer_route import find_safer_route
 
-from .real_road_data import build_real_roads
+from .safer_route import (
+    find_safer_route,
+)
+
+from .real_road_data import (
+    build_real_roads,
+)
 
 from backend.predictor import (
     predict_from_dataset,
@@ -27,76 +33,115 @@ from backend.data_loader import (
 
 
 # ============================================================
-# NORMALIZE REAL LOCATIONS FOR ROUTING ENGINE
+# NORMALIZE REAL LOCATIONS
 # ============================================================
 
-def normalize_locations_for_routing(locations):
+def normalize_locations_for_routing(
+    locations,
+):
 
     normalized_locations = []
 
+
     for location in locations:
 
-        normalized_locations.append({
+        normalized_locations.append(
 
-            # RoadNetwork expects these fields
-            "id":
-                location["location_id"],
+            {
 
-            "name":
-                location["location_name"],
+                # RoadNetwork fields
+                "id":
+                    location[
+                        "location_id"
+                    ],
+
+                "name":
+                    location[
+                        "location_name"
+                    ],
 
 
-            # Keep original fields as well
-            "location_id":
-                location["location_id"],
+                # Original fields
+                "location_id":
+                    location[
+                        "location_id"
+                    ],
 
-            "location_name":
-                location["location_name"],
+                "location_name":
+                    location[
+                        "location_name"
+                    ],
 
-            "latitude":
-                location["latitude"],
+                "latitude":
+                    location[
+                        "latitude"
+                    ],
 
-            "longitude":
-                location["longitude"],
+                "longitude":
+                    location[
+                        "longitude"
+                    ],
 
-        })
+            }
+
+        )
+
 
     return normalized_locations
 
 
 # ============================================================
-# BUILD REAL RISK DATA FROM PREDICTOR
+# BUILD REAL RISK DATA
 # ============================================================
 
 def build_real_risk_data(
-    forecast_minutes=0
+    forecast_minutes=0,
 ):
 
-    real_locations = get_all_locations()
+    real_locations = (
+        get_all_locations()
+    )
+
 
     risk_data = {}
 
+
     for location in real_locations:
 
-        location_id = location["location_id"]
+        location_id = location[
+            "location_id"
+        ]
 
-        predictions = predict_from_dataset(
-            location_id
+
+        predictions = (
+            predict_from_dataset(
+                location_id
+            )
         )
 
-        # Select prediction for requested time
+
+        # Select requested forecast time
         selected_prediction = next(
+
             (
                 prediction
-                for prediction in predictions
-                if prediction["forecast_minutes"]
+
+                for prediction
+                in predictions
+
+                if prediction[
+                    "forecast_minutes"
+                ]
                 == forecast_minutes
             ),
+
             None,
         )
 
+
         if selected_prediction is None:
             continue
+
 
         risk_data[location_id] = {
 
@@ -114,21 +159,34 @@ def build_real_risk_data(
                 selected_prediction[
                     "prediction_status"
                 ],
+
         }
 
+
     return risk_data
+
 
 # ============================================================
 # LOAD ROUTING INPUTS
 # ============================================================
 
-def load_routing_inputs(forecast_minutes=0):
+def load_routing_inputs(
+    forecast_minutes=0,
+):
 
-    # Load actual Mumbai locations
-    real_locations = get_all_locations()
+    # --------------------------------------------------------
+    # LOAD REAL LOCATIONS
+    # --------------------------------------------------------
+
+    real_locations = (
+        get_all_locations()
+    )
 
 
-    # Convert location_id -> id
+    # --------------------------------------------------------
+    # NORMALIZE LOCATIONS
+    # --------------------------------------------------------
+
     locations = (
         normalize_locations_for_routing(
             real_locations
@@ -136,13 +194,27 @@ def load_routing_inputs(forecast_minutes=0):
     )
 
 
-    # Existing road topology
-    roads = build_real_roads(real_locations,max_distance_km=2.0)
+    # --------------------------------------------------------
+    # BUILD REAL ROAD NETWORK
+    # --------------------------------------------------------
+
+    roads = (
+        build_real_roads(
+            real_locations,
+            max_distance_km=2.0,
+        )
+    )
 
 
-    # Existing routing risk data
-    # Build real risk data from Predictor
-    risk_data = build_real_risk_data(forecast_minutes)  
+    # --------------------------------------------------------
+    # BUILD RISK DATA
+    # --------------------------------------------------------
+
+    risk_data = (
+        build_real_risk_data(
+            forecast_minutes
+        )
+    )
 
 
     return (
@@ -165,6 +237,10 @@ def build_routing_report(
     risk_data=None,
 ):
 
+    # --------------------------------------------------------
+    # LOAD DATA IF NOT PROVIDED
+    # --------------------------------------------------------
+
     if (
         locations is None
         or roads is None
@@ -175,52 +251,188 @@ def build_routing_report(
             locations,
             roads,
             risk_data,
-        ) = load_routing_inputs(forecast_minutes)
+        ) = load_routing_inputs(
+            forecast_minutes
+        )
 
 
-    # Build network
+    # --------------------------------------------------------
+    # BUILD NETWORK
+    # --------------------------------------------------------
+
     network = RoadNetwork(
         locations,
         roads,
     )
 
 
-    # Find affected roads
-    affected = get_affected_roads(
-        network,
-        risk_data,
+    # --------------------------------------------------------
+    # AFFECTED ROADS
+    # --------------------------------------------------------
+
+    affected = (
+        get_affected_roads(
+            network,
+            risk_data,
+        )
     )
 
 
-    # Find changing risk
-    shifting = get_shifting_risk(
-        risk_data
+    # --------------------------------------------------------
+    # SHIFTING RISK
+    # --------------------------------------------------------
+
+    shifting = (
+        get_shifting_risk(
+            risk_data
+        )
     )
 
 
-    # Find safer route
-    route = find_safer_route(
-        network,
-        risk_data,
-        start_id,
-        end_id,
+    # --------------------------------------------------------
+    # FIND SAFER ROUTE
+    # --------------------------------------------------------
+
+    route = (
+        find_safer_route(
+            network,
+            risk_data,
+            start_id,
+            end_id,
+        )
     )
 
+
+    # --------------------------------------------------------
+    # ENRICH ROAD DATA
+    #
+    # This keeps the original road objects but adds readable
+    # names wherever endpoint IDs can be determined.
+    # --------------------------------------------------------
+
+    enriched_roads = []
+
+
+    for road in roads:
+
+        road_copy = dict(road)
+
+
+        road_id = (
+            road.get("road_id")
+            or road.get("id")
+        )
+
+
+        # Try different possible endpoint fields
+        from_id = (
+            road.get("from_id")
+            or road.get("from")
+            or road.get("start_id")
+        )
+
+
+        to_id = (
+            road.get("to_id")
+            or road.get("to")
+            or road.get("end_id")
+        )
+
+
+        # ----------------------------------------------------
+        # Add readable road name
+        # ----------------------------------------------------
+
+        if (
+            from_id in network.locations
+            and to_id in network.locations
+        ):
+
+            try:
+
+                from_name = (
+                    network.location_name(
+                        from_id
+                    )
+                )
+
+            except Exception:
+
+                from_name = str(
+                    from_id
+                )
+
+
+            try:
+
+                to_name = (
+                    network.location_name(
+                        to_id
+                    )
+                )
+
+            except Exception:
+
+                to_name = str(
+                    to_id
+                )
+
+
+            road_copy[
+                "from_name"
+            ] = from_name
+
+
+            road_copy[
+                "to_name"
+            ] = to_name
+
+
+            road_copy[
+                "road_name"
+            ] = (
+                f"{from_name} → {to_name}"
+            )
+
+
+        else:
+
+            # Preserve existing name if available
+            if "road_name" not in road_copy:
+
+                road_copy[
+                    "road_name"
+                ] = road_id
+
+
+        enriched_roads.append(
+            road_copy
+        )
+
+
+    # --------------------------------------------------------
+    # RETURN COMPLETE REPORT
+    # --------------------------------------------------------
 
     return {
 
-    "forecast_minutes":forecast_minutes,
-    
-    "affected_roads": affected,
+        "forecast_minutes":
+            forecast_minutes,
 
-    "shifting_risk_locations": shifting,
+        "affected_roads":
+            affected,
 
-    "safer_route": route,
+        "shifting_risk_locations":
+            shifting,
 
-    # Send all roads so React can draw
-    # roads that are part of the safe route.
-    "roads": roads,
-}
+        "safer_route":
+            route,
+
+        # React uses this to display
+        # road names and draw the network.
+        "roads":
+            enriched_roads,
+    }
 
 
 # ============================================================
@@ -232,9 +444,11 @@ if __name__ == "__main__":
     import json
 
 
-    report = build_routing_report(
-        start_id="L001",
-        end_id="L010",
+    report = (
+        build_routing_report(
+            start_id="L001",
+            end_id="L010",
+        )
     )
 
 
