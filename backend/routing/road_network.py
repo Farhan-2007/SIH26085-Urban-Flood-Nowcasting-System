@@ -1,46 +1,43 @@
 """
 road_network.py
-----------------
-Builds a basic road network graph from location + road data.
+---------------
 
-No external dependencies (no networkx) so this drops straight into the
-Flask backend later without adding a new requirement.
+Represents real-road routing results returned by OSRM.
+
+The actual road graph is maintained by OSRM/OpenStreetMap.
 """
+
+from .osrm_client import OSRMClient
 
 
 class RoadNetwork:
-    def __init__(self, locations, roads):
-        """
-        locations: list of dicts like MOCK_LOCATIONS
-        roads: list of dicts like MOCK_ROADS
-        """
-        self.locations = {loc["id"]: loc for loc in locations}
-        self.roads = roads
-        # adjacency list: node_id -> list of (neighbor_id, road_id, distance_km)
-        self.adjacency = {loc_id: [] for loc_id in self.locations}
-        self._build_graph()
 
-    def _build_graph(self):
-        for road in self.roads:
-            a, b = road["from"], road["to"]
-            dist = road["distance_km"]
-            road_id = road["road_id"]
-            # undirected: roads can be travelled both ways
-            self.adjacency[a].append((b, road_id, dist))
-            self.adjacency[b].append((a, road_id, dist))
+    def __init__(
+        self,
+        osrm_client=None
+    ):
 
-    def get_neighbors(self, location_id):
-        return self.adjacency.get(location_id, [])
+        self.osrm = (
+            osrm_client
+            or OSRMClient()
+        )
 
-    def get_road_between(self, loc_a, loc_b):
-        for neighbor_id, road_id, dist in self.adjacency.get(loc_a, []):
-            if neighbor_id == loc_b:
-                return road_id, dist
-        return None, None
+    def get_routes(
+        self,
+        start_lat,
+        start_lon,
+        end_lat,
+        end_lon
+    ):
 
-    def all_roads(self):
-        return self.roads
+        return self.osrm.get_route(
 
-    def location_name(self, location_id):
-        loc = self.locations.get(location_id)
-        return loc["name"] if loc else location_id
+            start_lat=start_lat,
+            start_lon=start_lon,
+
+            end_lat=end_lat,
+            end_lon=end_lon,
+
+            alternatives=True
+
+        )
