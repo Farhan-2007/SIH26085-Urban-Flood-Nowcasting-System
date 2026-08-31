@@ -74,7 +74,7 @@ export default function App() {
       <main className="dashboard">
 
 
-        {/* RISK OVERVIEW */}
+        {/* 1. RISK OVERVIEW */}
 
         <div className="dashboard__row dashboard__row--top">
 
@@ -88,7 +88,7 @@ export default function App() {
         </div>
 
 
-        {/* RISK FACTORS */}
+        {/* 2. RISK FACTORS */}
 
         <RiskFactorsPanel
           selectedForecast={selected}
@@ -97,16 +97,24 @@ export default function App() {
         />
 
 
-        {/* RAINFALL */}
+        {/* 3. RAINFALL CONDITIONS + ALERTS & WARNINGS — side by side */}
 
-        <RainfallPanel
-          selected={selected}
-          history={rainfallHistory}
-          analysis={analysis}
-        />
+        <div className="dashboard__row dashboard__row--split">
+
+          <RainfallPanel
+            selected={selected}
+            history={rainfallHistory}
+            analysis={analysis}
+          />
+
+          <AlertsPanel
+            alerts={alerts}
+          />
+
+        </div>
 
 
-        {/* GIS MAP */}
+        {/* 4. GIS MAP */}
 
         <FloodMap
           locations={locations}
@@ -117,7 +125,7 @@ export default function App() {
         />
 
 
-        {/* SAFE ROUTING */}
+        {/* 5. SAFE ROUTING */}
 
         <RoutePanel
           locations={locations}
@@ -128,19 +136,12 @@ export default function App() {
         />
 
 
-        {/* FORECAST TIMELINE */}
+        {/* 6. FORECAST TIMELINE */}
 
         <ForecastTimeline
           forecast={timeline}
           selectedStep={selectedStep}
           onSelectStep={setSelectedStep}
-        />
-
-
-        {/* ALERTS */}
-
-        <AlertsPanel
-          alerts={alerts}
         />
 
 

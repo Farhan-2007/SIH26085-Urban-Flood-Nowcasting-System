@@ -13,7 +13,7 @@ export default function ForecastTimeline({
   selectedStep = 0,
   onSelectStep,
 }) {
-  const [playing, setPlaying] = useState(false);
+  const [playing, setPlaying] = useState(true);
   const intervalRef = useRef(null);
 
   useEffect(() => {
