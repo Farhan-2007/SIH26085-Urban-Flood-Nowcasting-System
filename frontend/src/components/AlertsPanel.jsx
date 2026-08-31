@@ -100,6 +100,15 @@ export default function AlertsPanel({
     );
 
 
+  // Recomputing this key whenever the alert set's ids/messages change
+  // (e.g. when the forecast timeline advances to a new step) causes the
+  // list below to remount, replaying the fade/slide-in animation defined
+  // in AlertsPanel.css. When the underlying alerts are unchanged, the key
+  // stays the same and nothing re-animates.
+  const alertsRenderKey = uniqueAlerts
+    .map((alert) => `${alert.id}:${alert.message}`)
+    .join("|");
+
   return (
 
     <section
@@ -139,7 +148,7 @@ export default function AlertsPanel({
       {/* ALERT LIST */}
       {/* ================================================== */}
 
-      <div className="panel-body alerts-panel__body">
+      <div className="panel-body alerts-panel__body" key={alertsRenderKey}>
 
 
         {/* NO ALERTS */}
